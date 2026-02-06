@@ -1,0 +1,5 @@
+{
+  "name": "Spelling Bee Manager",
+  "description": "A comprehensive Spelling Bee management platform for grades 1-6. Features list management, AI-powered word definitions, and a specialized practice mode for moderators.",
+  "requestFramePermissions": []
+}
