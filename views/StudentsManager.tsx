@@ -1,25 +1,45 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { StudentProfile, GradeLevel } from '../types';
-import { Users, Plus, Trash2, School, User, Camera, Upload, X } from 'lucide-react';
+import { Users, Plus, Trash2, School, Camera, X, Pencil } from 'lucide-react';
 
 interface StudentsManagerProps {
   students: StudentProfile[];
   onAddStudent: (student: StudentProfile) => void;
+  onUpdateStudent: (student: StudentProfile) => void;
   onDeleteStudent: (id: string) => void;
 }
 
-export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAddStudent, onDeleteStudent }) => {
+export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAddStudent, onUpdateStudent, onDeleteStudent }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [school, setSchool] = useState('');
   const [grade, setGrade] = useState<GradeLevel>(1);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [editingStudent, setEditingStudent] = useState<StudentProfile | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filter States
   const [filterGrade, setFilterGrade] = useState<GradeLevel | 'All'>('All');
   const [filterSchool, setFilterSchool] = useState<string>('All');
+
+  // When editing, fill form with student data
+  useEffect(() => {
+    if (editingStudent) {
+      setFirstName(editingStudent.firstName);
+      setLastName(editingStudent.lastName);
+      setSchool(editingStudent.school);
+      setGrade(editingStudent.grade);
+      setPhoto(editingStudent.photo ?? null);
+    } else {
+      setFirstName('');
+      setLastName('');
+      setSchool('');
+      setGrade(1);
+      setPhoto(null);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [editingStudent]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,21 +67,42 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim() || !school.trim()) return;
 
-    const newStudent: StudentProfile = {
-      id: crypto.randomUUID(),
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      school: school.trim(),
-      grade,
-      photo: photo || undefined
-    };
+    if (editingStudent) {
+      const updated: StudentProfile = {
+        ...editingStudent,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        school: school.trim(),
+        grade,
+        photo: photo || undefined,
+      };
+      onUpdateStudent(updated);
+      setEditingStudent(null);
+    } else {
+      const newStudent: StudentProfile = {
+        id: crypto.randomUUID(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        school: school.trim(),
+        grade,
+        photo: photo || undefined
+      };
+      onAddStudent(newStudent);
+      setFirstName('');
+      setLastName('');
+      setPhoto(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
-    onAddStudent(newStudent);
+  const handleCancelEdit = () => {
+    setEditingStudent(null);
     setFirstName('');
     setLastName('');
+    setSchool('');
+    setGrade(1);
     setPhoto(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
-    // Keep school and grade for faster entry of classmates
   };
 
   // Extract unique schools for filter
@@ -88,7 +129,11 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm sticky top-24">
             <h3 className="font-bold text-stone-800 mb-4 flex items-center gap-2">
-              <Plus size={18} className="text-yellow-500" /> New Student
+              {editingStudent ? (
+                <><Pencil size={18} className="text-amber-500" /> Edit Student</>
+              ) : (
+                <><Plus size={18} className="text-yellow-500" /> New Student</>
+              )}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               
@@ -177,12 +222,23 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
                 </select>
               </div>
 
-              <button
-                type="submit"
-                className="w-full py-3 bg-stone-800 text-yellow-400 rounded-xl font-bold hover:bg-stone-900 transition-colors shadow-md mt-2"
-              >
-                Register Student
-              </button>
+              <div className="flex gap-2 mt-2">
+                {editingStudent && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="flex-1 py-3 bg-stone-100 text-stone-600 rounded-xl font-bold hover:bg-stone-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className={editingStudent ? "flex-1 py-3 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 transition-colors shadow-md" : "w-full py-3 bg-stone-800 text-yellow-400 rounded-xl font-bold hover:bg-stone-900 transition-colors shadow-md"}
+                >
+                  {editingStudent ? 'Save changes' : 'Register Student'}
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -248,12 +304,22 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
                             </div>
                         </div>
                     </div>
-                    <button 
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => setEditingStudent(student)}
+                        className="p-2 text-stone-300 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button 
                         onClick={() => onDeleteStudent(student.id)}
                         className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    >
+                        title="Delete"
+                      >
                         <Trash2 size={16} />
                     </button>
+                    </div>
                   </div>
                 ))
             )}

@@ -20,6 +20,7 @@ import {
   updateWord as updateWordInSupabase,
   deleteWord as deleteWordFromSupabase,
   addStudent as addStudentToSupabase,
+  updateStudent as updateStudentInSupabase,
   deleteStudent as deleteStudentFromSupabase,
   addSession as addSessionToSupabase,
 } from './services/supabaseData';
@@ -27,15 +28,6 @@ import {
 const WORDS_STORAGE_KEY = 'spellbound_words_v1';
 const SESSIONS_STORAGE_KEY = 'spellbound_sessions_v1';
 const STUDENTS_STORAGE_KEY = 'spellbound_students_v1';
-
-const SEED_WORDS: WordEntry[] = [
-  { id: crypto.randomUUID(), word: 'Puppy', definition: 'A young dog.', example: 'The puppy played in the grass.', grade: 1, difficulty: 'Easy' },
-  { id: crypto.randomUUID(), word: 'Kitten', definition: 'A young cat.', example: 'The kitten is sleeping.', grade: 1, difficulty: 'Easy' },
-  { id: crypto.randomUUID(), word: 'Galaxy', definition: 'A system of millions or billions of stars.', example: 'The Milky Way is our galaxy.', grade: 4, difficulty: 'Medium' },
-  { id: crypto.randomUUID(), word: 'Photosynthesis', definition: 'The process by which plants use sunlight to synthesize foods.', example: 'Photosynthesis requires chlorophyll.', grade: 6, difficulty: 'Hard' },
-  { id: crypto.randomUUID(), word: 'Ephemeral', definition: 'Lasting for a very short time.', example: 'Fashions are ephemeral, changing with every season.', grade: 9, difficulty: 'Medium' },
-  { id: crypto.randomUUID(), word: 'Vicissitude', definition: 'A change of circumstances or fortune, typically one that is unwelcome or unpleasant.', example: 'He was prepared for the vicissitudes of life.', grade: 11, difficulty: 'Hard' },
-];
 
 // Imagen de la abeja: guarda tu archivo como public/bee.png (PNG, JPG o WebP)
 const BEE_IMAGE_URL = "/bee.png";
@@ -68,15 +60,6 @@ const App: React.FC = () => {
           setWords(w);
           setStudents(s);
           setSessions(sess);
-          if (w.length === 0) {
-            for (const entry of SEED_WORDS) {
-              try {
-                const added = await addWordToSupabase(entry);
-                if (cancelled) return;
-                setWords(prev => [...prev, added]);
-              } catch (_) {}
-            }
-          }
         } catch (e) {
           if (!cancelled) setDataError(e instanceof Error ? e.message : 'Error loading data');
         } finally {
@@ -92,8 +75,8 @@ const App: React.FC = () => {
           console.error("Failed to parse words", e);
         }
       } else {
-        setWords(SEED_WORDS);
-        localStorage.setItem(WORDS_STORAGE_KEY, JSON.stringify(SEED_WORDS));
+        setWords([]);
+        localStorage.setItem(WORDS_STORAGE_KEY, '[]');
       }
       const savedSessions = localStorage.getItem(SESSIONS_STORAGE_KEY);
       if (savedSessions) {
@@ -207,6 +190,19 @@ const App: React.FC = () => {
     }
   };
 
+  const updateStudent = async (updated: StudentProfile) => {
+    if (isSupabaseConfigured()) {
+      try {
+        const result = await updateStudentInSupabase(updated);
+        setStudents(prev => prev.map(s => s.id === result.id ? result : s));
+      } catch (e) {
+        console.error('Failed to update student', e);
+      }
+    } else {
+      setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
+    }
+  };
+
   const deleteStudent = async (id: string) => {
     if (isSupabaseConfigured()) {
       try {
@@ -316,6 +312,7 @@ const App: React.FC = () => {
                 <StudentsManager 
                     students={students} 
                     onAddStudent={addStudent} 
+                    onUpdateStudent={updateStudent}
                     onDeleteStudent={deleteStudent} 
                 />
             )}

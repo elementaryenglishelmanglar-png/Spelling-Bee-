@@ -158,6 +158,35 @@ export async function addStudent(profile: StudentProfile): Promise<StudentProfil
   };
 }
 
+export async function updateStudent(profile: StudentProfile): Promise<StudentProfile> {
+  if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+  let photoUrl: string | null = null;
+  if (profile.photo) {
+    if (isDataUrl(profile.photo)) {
+      photoUrl = await uploadDataUrlToStorage(BUCKET_STUDENT_PHOTOS, `${profile.id}.png`, profile.photo);
+    } else {
+      photoUrl = profile.photo;
+    }
+  }
+  const payload: any = {
+    first_name: profile.firstName,
+    last_name: profile.lastName,
+    school: profile.school,
+    grade: profile.grade,
+    photo_url: photoUrl,
+  };
+  const { data, error } = await supabase.from('students').update(payload).eq('id', profile.id).select().single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    school: data.school,
+    grade: data.grade,
+    photo: data.photo_url ?? undefined,
+  };
+}
+
 export async function deleteStudent(id: string): Promise<void> {
   if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
   await supabase.storage.from(BUCKET_STUDENT_PHOTOS).remove([`${id}.png`]);
