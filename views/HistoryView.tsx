@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Session } from '../types';
-import { Calendar, BookOpen, UserCheck, ChevronRight, X, Award, Building2, Clock } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Session, GradeLevel } from '../types';
+import { Calendar, BookOpen, UserCheck, ChevronRight, X, Award, Building2, Clock, Filter, Search } from 'lucide-react';
 
 interface HistoryViewProps {
   sessions: Session[];
@@ -8,6 +8,53 @@ interface HistoryViewProps {
 
 export const HistoryView: React.FC<HistoryViewProps> = ({ sessions }) => {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [gradeFilter, setGradeFilter] = useState<GradeLevel | 'all'>('all');
+  const [studentFilter, setStudentFilter] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Get unique students from all sessions
+  const uniqueStudents = useMemo(() => {
+    const students = new Set<string>();
+    sessions.forEach(session => {
+      session.attempts.forEach(attempt => {
+        students.add(attempt.studentName);
+      });
+    });
+    return Array.from(students).sort();
+  }, [sessions]);
+
+  // Filter sessions
+  const filteredSessions = useMemo(() => {
+    let result = [...sessions];
+
+    // Filter by grade
+    if (gradeFilter !== 'all') {
+      result = result.filter(s => s.grade === gradeFilter);
+    }
+
+    // Filter by student name
+    if (studentFilter.trim()) {
+      const query = studentFilter.toLowerCase();
+      result = result.filter(s => 
+        s.attempts.some(a => a.studentName.toLowerCase().includes(query))
+      );
+    }
+
+    // Filter by date range
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      result = result.filter(s => new Date(s.date) >= fromDate);
+    }
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999); // End of day
+      result = result.filter(s => new Date(s.date) <= toDate);
+    }
+
+    return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [sessions, gradeFilter, studentFilter, dateFrom, dateTo]);
 
   if (sessions.length === 0) {
     return (
@@ -17,9 +64,6 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ sessions }) => {
       </div>
     );
   }
-
-  // Sort by date descending
-  const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Modal for details
   if (selectedSession) {
@@ -133,66 +177,174 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ sessions }) => {
 
   // Main List View
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in pb-12">
-      <h2 className="text-2xl font-bold text-stone-800 mb-6 flex items-center gap-2">
-         <Clock className="text-stone-400" /> Session History
-      </h2>
+    <div className="max-w-6xl mx-auto space-y-6 animate-fade-in pb-12">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h2 className="text-2xl font-bold text-stone-800 flex items-center gap-2">
+           <Clock className="text-stone-400" /> Session History
+        </h2>
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+            showFilters 
+              ? 'bg-yellow-100 border-yellow-300 text-stone-800' 
+              : 'bg-white border-stone-300 text-stone-600 hover:bg-stone-50'
+          }`}
+        >
+          <Filter size={16} />
+          <span className="text-sm font-medium">Filters</span>
+          {(gradeFilter !== 'all' || studentFilter || dateFrom || dateTo) && (
+            <span className="w-5 h-5 bg-yellow-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+              {[gradeFilter !== 'all' ? 1 : 0, studentFilter ? 1 : 0, dateFrom ? 1 : 0, dateTo ? 1 : 0].reduce((a, b) => a + b, 0)}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Grade Filter */}
+            <div>
+              <label className="block text-xs font-bold text-stone-600 mb-2 uppercase">Grade</label>
+              <select
+                value={gradeFilter}
+                onChange={(e) => setGradeFilter(e.target.value === 'all' ? 'all' : Number(e.target.value) as GradeLevel)}
+                className="w-full p-2 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-200 outline-none"
+              >
+                <option value="all">All Grades</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
+                  <option key={g} value={g}>Grade {g}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Student Filter */}
+            <div>
+              <label className="block text-xs font-bold text-stone-600 mb-2 uppercase">Student</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
+                <input
+                  type="text"
+                  value={studentFilter}
+                  onChange={(e) => setStudentFilter(e.target.value)}
+                  placeholder="Search student..."
+                  className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-200 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Date From */}
+            <div>
+              <label className="block text-xs font-bold text-stone-600 mb-2 uppercase">From Date</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full p-2 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-200 outline-none"
+              />
+            </div>
+
+            {/* Date To */}
+            <div>
+              <label className="block text-xs font-bold text-stone-600 mb-2 uppercase">To Date</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full p-2 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-200 outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Clear Filters */}
+          {(gradeFilter !== 'all' || studentFilter || dateFrom || dateTo) && (
+            <div className="mt-4 pt-4 border-t border-stone-200">
+              <button
+                onClick={() => {
+                  setGradeFilter('all');
+                  setStudentFilter('');
+                  setDateFrom('');
+                  setDateTo('');
+                }}
+                className="text-sm text-stone-500 hover:text-stone-800 font-medium"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Results Count */}
+      {filteredSessions.length !== sessions.length && (
+        <div className="text-sm text-stone-500">
+          Showing {filteredSessions.length} of {sessions.length} sessions
+        </div>
+      )}
       
       <div className="grid grid-cols-1 gap-4">
-        {sortedSessions.map((session) => {
-           const correctCount = session.attempts.filter(a => a.result === 'correct').length;
-           const accuracy = session.attempts.length > 0 ? Math.round((correctCount / session.attempts.length) * 100) : 0;
-           
-           return (
-            <button 
-                key={session.id} 
-                onClick={() => setSelectedSession(session)}
-                className="w-full text-left bg-white p-6 rounded-xl border border-stone-200 shadow-sm hover:shadow-lg hover:border-yellow-400 transition-all group"
-            >
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                
-                {/* Left: Info */}
-                <div className="flex-1 space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                     {session.contestType && (
-                        <span className="px-2 py-1 bg-stone-800 text-yellow-400 text-[10px] uppercase font-bold rounded flex items-center gap-1 shadow-sm">
-                            <Building2 size={10} /> {session.contestType}
-                        </span>
-                     )}
-                     {session.stage && (
-                        <span className={`px-2 py-1 text-[10px] uppercase font-bold rounded border flex items-center gap-1 shadow-sm ${session.stage === 'Final' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
-                            <Award size={10} /> {session.stage}
-                        </span>
-                     )}
-                     <span className="text-xs font-bold text-stone-400 uppercase tracking-wide ml-1">
-                        {new Date(session.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-                     </span>
+        {filteredSessions.length === 0 ? (
+          <div className="text-center py-12 text-stone-400">
+            <Filter size={48} className="mx-auto mb-4 opacity-20" />
+            <p className="text-lg">No sessions match your filters.</p>
+          </div>
+        ) : (
+          filteredSessions.map((session) => {
+             const correctCount = session.attempts.filter(a => a.result === 'correct').length;
+             const accuracy = session.attempts.length > 0 ? Math.round((correctCount / session.attempts.length) * 100) : 0;
+             
+             return (
+              <button 
+                  key={session.id} 
+                  onClick={() => setSelectedSession(session)}
+                  className="w-full text-left bg-white p-6 rounded-xl border border-stone-200 shadow-sm hover:shadow-lg hover:border-yellow-400 transition-all group"
+              >
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  
+                  {/* Left: Info */}
+                  <div className="flex-1 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                       {session.contestType && (
+                          <span className="px-2 py-1 bg-stone-800 text-yellow-400 text-[10px] uppercase font-bold rounded flex items-center gap-1 shadow-sm">
+                              <Building2 size={10} /> {session.contestType}
+                          </span>
+                       )}
+                       {session.stage && (
+                          <span className={`px-2 py-1 text-[10px] uppercase font-bold rounded border flex items-center gap-1 shadow-sm ${session.stage === 'Final' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                              <Award size={10} /> {session.stage}
+                          </span>
+                       )}
+                       <span className="text-xs font-bold text-stone-400 uppercase tracking-wide ml-1">
+                          {new Date(session.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                       </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-stone-700">
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                           <UserCheck size={18} className="text-stone-400" />
+                           {session.moderator}
+                        </h3>
+                        <span className="text-stone-300 hidden sm:inline">|</span>
+                        <span className="text-sm font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded">Grade {session.grade}</span>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-stone-700">
-                      <h3 className="text-lg font-bold flex items-center gap-2">
-                         <UserCheck size={18} className="text-stone-400" />
-                         {session.moderator}
-                      </h3>
-                      <span className="text-stone-300 hidden sm:inline">|</span>
-                      <span className="text-sm font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded">Grade {session.grade}</span>
+                  {/* Right: Stats & Arrow */}
+                  <div className="flex items-center justify-between w-full md:w-auto gap-6 border-t md:border-t-0 border-stone-100 pt-4 md:pt-0">
+                     <div className="text-right">
+                        <p className="text-2xl font-bold text-stone-800 leading-none mb-1">{session.attempts.length} <span className="text-xs font-normal text-stone-400 uppercase">Words</span></p>
+                        <p className="text-xs font-bold text-green-600">{accuracy}% Accuracy</p>
+                     </div>
+                     <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-300 group-hover:bg-yellow-400 group-hover:text-stone-900 transition-colors shadow-sm">
+                          <ChevronRight size={20} />
+                     </div>
                   </div>
                 </div>
-
-                {/* Right: Stats & Arrow */}
-                <div className="flex items-center justify-between w-full md:w-auto gap-6 border-t md:border-t-0 border-stone-100 pt-4 md:pt-0">
-                   <div className="text-right">
-                      <p className="text-2xl font-bold text-stone-800 leading-none mb-1">{session.attempts.length} <span className="text-xs font-normal text-stone-400 uppercase">Words</span></p>
-                      <p className="text-xs font-bold text-green-600">{accuracy}% Accuracy</p>
-                   </div>
-                   <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-300 group-hover:bg-yellow-400 group-hover:text-stone-900 transition-colors shadow-sm">
-                        <ChevronRight size={20} />
-                   </div>
-                </div>
-              </div>
-            </button>
-           );
-        })}
+              </button>
+             );
+          })
+        )}
       </div>
     </div>
   );

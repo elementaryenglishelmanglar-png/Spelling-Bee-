@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { StudentProfile, GradeLevel } from '../types';
 import { Users, Plus, Trash2, School, Camera, X, Pencil } from 'lucide-react';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 interface StudentsManagerProps {
   students: StudentProfile[];
@@ -16,6 +17,7 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
   const [grade, setGrade] = useState<GradeLevel>(1);
   const [photo, setPhoto] = useState<string | null>(null);
   const [editingStudent, setEditingStudent] = useState<StudentProfile | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<StudentProfile | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -313,7 +315,7 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
                         <Pencil size={16} />
                       </button>
                       <button 
-                        onClick={() => onDeleteStudent(student.id)}
+                        onClick={() => setStudentToDelete(student)}
                         className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete"
                       >
@@ -326,6 +328,21 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={!!studentToDelete}
+        title="Delete Student"
+        message={`Are you sure you want to delete "${studentToDelete?.firstName} ${studentToDelete?.lastName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={() => {
+          if (studentToDelete) {
+            onDeleteStudent(studentToDelete.id);
+            setStudentToDelete(null);
+          }
+        }}
+        onCancel={() => setStudentToDelete(null)}
+        type="danger"
+      />
     </div>
   );
 };

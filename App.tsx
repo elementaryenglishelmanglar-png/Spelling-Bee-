@@ -11,6 +11,10 @@ import { StudentDrill } from './views/StudentDrill';
 import { StudentsManager } from './views/StudentsManager'; // New View
 import { LayoutDashboard, List, Play, Book, History, LogOut, Sparkles, GraduationCap, Users } from 'lucide-react';
 import { hasTeacherSession, clearTeacherSession } from './lib/auth';
+import { ToastProvider, useToast } from './lib/toastContext';
+import { ToastContainer } from './components/Toast';
+import { LoadingOverlay } from './components/LoadingSpinner';
+
 import {
   isSupabaseConfigured,
   fetchWords as fetchWordsFromSupabase,
@@ -32,7 +36,8 @@ const STUDENTS_STORAGE_KEY = 'spellbound_students_v1';
 // Imagen de la abeja: guarda tu archivo como public/bee.png (PNG, JPG o WebP)
 const BEE_IMAGE_URL = "/bee.png";
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { showToast, toasts, removeToast } = useToast();
   const [role, setRole] = useState<Role>(() => (hasTeacherSession() ? 'teacher' : null));
   const [view, setView] = useState<ViewState>('dashboard');
   
@@ -42,6 +47,7 @@ const App: React.FC = () => {
   const [manageGrade, setManageGrade] = useState<GradeLevel>(1);
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [savingSession, setSavingSession] = useState(false);
 
   // Cargar datos: Supabase o localStorage
   useEffect(() => {
@@ -60,8 +66,13 @@ const App: React.FC = () => {
           setWords(w);
           setStudents(s);
           setSessions(sess);
+          if (!cancelled) showToast('Data loaded successfully', 'success');
         } catch (e) {
-          if (!cancelled) setDataError(e instanceof Error ? e.message : 'Error loading data');
+          if (!cancelled) {
+            const errorMsg = e instanceof Error ? e.message : 'Error loading data';
+            setDataError(errorMsg);
+            showToast(`Failed to load data: ${errorMsg}`, 'error');
+          }
         } finally {
           if (!cancelled) setDataLoading(false);
         }
@@ -130,11 +141,15 @@ const App: React.FC = () => {
       try {
         const added = await addWordToSupabase(newWord);
         setWords(prev => [...prev, added]);
+        showToast(`Word "${newWord.word}" added successfully`, 'success');
       } catch (e) {
+        const errorMsg = e instanceof Error ? e.message : 'Failed to add word';
+        showToast(errorMsg, 'error');
         console.error('Failed to add word', e);
       }
     } else {
       setWords(prev => [...prev, newWord]);
+      showToast(`Word "${newWord.word}" added successfully`, 'success');
     }
   };
 
@@ -143,37 +158,50 @@ const App: React.FC = () => {
       try {
         const updated = await updateWordInSupabase(updatedWord);
         setWords(prev => prev.map(w => w.id === updated.id ? updated : w));
+        showToast(`Word "${updatedWord.word}" updated successfully`, 'success');
       } catch (e) {
+        const errorMsg = e instanceof Error ? e.message : 'Failed to update word';
+        showToast(errorMsg, 'error');
         console.error('Failed to update word', e);
       }
     } else {
       setWords(prev => prev.map(w => w.id === updatedWord.id ? updatedWord : w));
+      showToast(`Word "${updatedWord.word}" updated successfully`, 'success');
     }
   };
 
   const deleteWord = async (id: string) => {
+    const word = words.find(w => w.id === id);
     if (isSupabaseConfigured()) {
       try {
         await deleteWordFromSupabase(id);
         setWords(prev => prev.filter(w => w.id !== id));
+        showToast(`Word "${word?.word || ''}" deleted successfully`, 'success');
       } catch (e) {
+        const errorMsg = e instanceof Error ? e.message : 'Failed to delete word';
+        showToast(errorMsg, 'error');
         console.error('Failed to delete word', e);
       }
     } else {
       setWords(prev => prev.filter(w => w.id !== id));
+      showToast(`Word "${word?.word || ''}" deleted successfully`, 'success');
     }
   };
 
   const saveSession = async (newSession: Session) => {
-    if (isSupabaseConfigured()) {
-      try {
+    setSavingSession(true);
+    try {
+      if (isSupabaseConfigured()) {
         await addSessionToSupabase(newSession);
-        setSessions(prev => [newSession, ...prev]);
-      } catch (e) {
-        console.error('Failed to save session', e);
       }
-    } else {
       setSessions(prev => [newSession, ...prev]);
+      showToast('Session saved successfully!', 'success');
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Failed to save session';
+      showToast(errorMsg, 'error');
+      console.error('Failed to save session', e);
+    } finally {
+      setSavingSession(false);
     }
   };
 
@@ -250,6 +278,7 @@ const App: React.FC = () => {
   // 3. Main App Layout
   return (
     <div className="min-h-screen bg-orange-50/30 flex flex-col font-sans">
+      <LoadingOverlay isLoading={savingSession} text="Saving session..." />
       {dataError && (
         <div className="bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-center text-sm font-medium">
           {dataError} (comprobando conexión o variables de Supabase)
@@ -306,7 +335,7 @@ const App: React.FC = () => {
         {/* --- TEACHER VIEWS --- */}
         {role === 'teacher' && (
           <>
-            {view === 'dashboard' && <Dashboard words={words} onChangeView={setView} beeImageUrl={BEE_IMAGE_URL} />}
+            {view === 'dashboard' && <Dashboard words={words} sessions={sessions} onChangeView={setView} beeImageUrl={BEE_IMAGE_URL} />}
             
             {view === 'students' && (
                 <StudentsManager 
@@ -388,7 +417,16 @@ const App: React.FC = () => {
           <p>© {new Date().getFullYear()} Spelling Bee Manager. Powered by Gemini API.</p>
         </div>
       </footer>
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 };
 

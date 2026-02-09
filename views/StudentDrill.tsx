@@ -1,16 +1,31 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { WordEntry, GradeLevel } from '../types';
-import { Volume2, CheckCircle, XCircle, ChevronRight, Trophy } from 'lucide-react';
+import { Volume2, CheckCircle, XCircle, ChevronRight, Trophy, Shuffle } from 'lucide-react';
+
+type PracticeMode = 'spelling' | 'anagram';
 
 interface StudentDrillProps {
   words: WordEntry[];
 }
 
+// Función para mezclar letras de una palabra
+const shuffleLetters = (word: string): string[] => {
+  const letters = word.split('');
+  for (let i = letters.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [letters[i], letters[j]] = [letters[j], letters[i]];
+  }
+  return letters;
+};
+
 export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
   const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(1);
+  const [practiceMode, setPracticeMode] = useState<PracticeMode>('spelling');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentWord, setCurrentWord] = useState<WordEntry | null>(null);
   const [userInput, setUserInput] = useState('');
+  const [shuffledLetters, setShuffledLetters] = useState<string[]>([]);
+  const [selectedLetters, setSelectedLetters] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
   const [score, setScore] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -28,13 +43,22 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
     const random = gradeWords[Math.floor(Math.random() * gradeWords.length)];
     setCurrentWord(random);
     setUserInput('');
+    setSelectedLetters([]);
     setFeedback('none');
+    
+    // Si es modo anagrama, mezclar las letras
+    if (practiceMode === 'anagram') {
+      const shuffled = shuffleLetters(random.word.toLowerCase());
+      setShuffledLetters(shuffled);
+    }
     
     // Auto pronounce after a short delay
     setTimeout(() => speak(random.word), 500);
     
-    // Focus input
-    setTimeout(() => inputRef.current?.focus(), 100);
+    // Focus input si es modo spelling
+    if (practiceMode === 'spelling') {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
   };
 
   const speak = (text: string) => {
@@ -43,11 +67,73 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
     window.speechSynthesis.speak(utterance);
   };
 
+  const handleLetterClick = (letter: string, index: number) => {
+    if (practiceMode !== 'anagram' || feedback !== 'none') return;
+    
+    // Remover la letra de las disponibles y agregarla a las seleccionadas
+    const newShuffled = [...shuffledLetters];
+    newShuffled.splice(index, 1);
+    setShuffledLetters(newShuffled);
+    
+    const newSelected = [...selectedLetters, letter];
+    setSelectedLetters(newSelected);
+    setUserInput(newSelected.join(''));
+  };
+
+  const handleRemoveLetter = (index: number) => {
+    if (practiceMode !== 'anagram' || feedback !== 'none') return;
+    
+    const letter = selectedLetters[index];
+    const newSelected = [...selectedLetters];
+    newSelected.splice(index, 1);
+    setSelectedLetters(newSelected);
+    setUserInput(newSelected.join(''));
+    
+    // Devolver la letra a las disponibles
+    setShuffledLetters([...shuffledLetters, letter]);
+  };
+
+  // Función helper para recalcular letras disponibles basándose en la palabra original y el input del usuario
+  const recalculateAvailableLetters = (inputText: string): string[] => {
+    if (!currentWord) return [];
+    const originalWord = currentWord.word.toLowerCase();
+    const originalLetters = originalWord.split('');
+    const inputLetters = inputText.toLowerCase().split('');
+    
+    // Contar cuántas veces aparece cada letra en el input
+    const inputCount: Record<string, number> = {};
+    inputLetters.forEach(l => {
+      inputCount[l] = (inputCount[l] || 0) + 1;
+    });
+    
+    // Calcular qué letras quedan disponibles
+    const available: string[] = [];
+    const originalCount: Record<string, number> = {};
+    originalLetters.forEach(l => {
+      originalCount[l] = (originalCount[l] || 0) + 1;
+    });
+    
+    // Para cada letra en la palabra original, agregar las que no se han usado
+    Object.keys(originalCount).forEach(letter => {
+      const used = inputCount[letter] || 0;
+      const total = originalCount[letter];
+      const remaining = total - used;
+      for (let i = 0; i < remaining; i++) {
+        available.push(letter);
+      }
+    });
+    
+    return available;
+  };
+
   const checkSpelling = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentWord || !userInput.trim()) return;
 
-    if (userInput.trim().toLowerCase() === currentWord.word.toLowerCase()) {
+    const userAnswer = userInput.trim().toLowerCase();
+    const correctAnswer = currentWord.word.toLowerCase();
+
+    if (userAnswer === correctAnswer) {
       setFeedback('correct');
       setScore(s => s + 10);
       const utterance = new SpeechSynthesisUtterance("Correct!");
@@ -63,8 +149,39 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
         <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-200">
           <Trophy size={32} />
         </div>
-        <h2 className="text-2xl font-bold text-stone-800 mb-2">Spelling Drill Exercise</h2>
-        <p className="text-stone-500 mb-8">Listen to the word and type it correctly. Test your skills!</p>
+        <h2 className="text-2xl font-bold text-stone-800 mb-2">Practice Exercises</h2>
+        <p className="text-stone-500 mb-8">Choose your practice mode and test your skills!</p>
+        
+        {/* Selector de modo de práctica */}
+        <div className="mb-8">
+          <label className="block text-sm font-bold text-stone-400 uppercase mb-3">Practice Mode</label>
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <button
+              onClick={() => setPracticeMode('spelling')}
+              className={`p-4 rounded-xl border-2 transition-all ${
+                practiceMode === 'spelling'
+                  ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                  : 'bg-stone-50 text-stone-600 border-stone-200 hover:border-stone-300'
+              }`}
+            >
+              <Volume2 size={24} className="mx-auto mb-2" />
+              <div className="font-bold text-sm">Spelling Drill</div>
+              <div className="text-xs mt-1 opacity-80">Listen & Type</div>
+            </button>
+            <button
+              onClick={() => setPracticeMode('anagram')}
+              className={`p-4 rounded-xl border-2 transition-all ${
+                practiceMode === 'anagram'
+                  ? 'bg-purple-600 text-white border-purple-600 shadow-lg'
+                  : 'bg-stone-50 text-stone-600 border-stone-200 hover:border-stone-300'
+              }`}
+            >
+              <Shuffle size={24} className="mx-auto mb-2" />
+              <div className="font-bold text-sm">Scrambled Letters</div>
+              <div className="text-xs mt-1 opacity-80">Rearrange Letters</div>
+            </button>
+          </div>
+        </div>
         
         <div className="mb-8">
           <label className="block text-sm font-bold text-stone-400 uppercase mb-2">Select Grade Level</label>
@@ -89,9 +206,13 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
         <button 
           onClick={startGame}
           disabled={gradeWords.length === 0}
-          className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-lg shadow-lg transition-all hover:-translate-y-1 disabled:opacity-50 disabled:translate-y-0"
+          className={`w-full py-4 text-white rounded-xl font-bold text-lg shadow-lg transition-all hover:-translate-y-1 disabled:opacity-50 disabled:translate-y-0 ${
+            practiceMode === 'anagram' 
+              ? 'bg-purple-600 hover:bg-purple-700' 
+              : 'bg-green-600 hover:bg-green-700'
+          }`}
         >
-          Start Drill
+          Start {practiceMode === 'anagram' ? 'Anagram Game' : 'Spelling Drill'}
         </button>
       </div>
     );
@@ -104,9 +225,13 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
           onClick={() => setIsPlaying(false)} 
           className="text-sm font-medium text-stone-500 hover:text-stone-800"
         >
-          ← Quit Drill
+          ← Quit {practiceMode === 'anagram' ? 'Game' : 'Drill'}
         </button>
-        <div className="px-4 py-1 bg-green-100 text-green-700 rounded-full font-bold text-sm border border-green-200">
+        <div className={`px-4 py-1 rounded-full font-bold text-sm border ${
+          practiceMode === 'anagram' 
+            ? 'bg-purple-100 text-purple-700 border-purple-200'
+            : 'bg-green-100 text-green-700 border-green-200'
+        }`}>
           Score: {score}
         </div>
       </div>
@@ -128,20 +253,94 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
 
           {feedback === 'none' ? (
             <form onSubmit={checkSpelling}>
-              <input
-                ref={inputRef}
-                type="text"
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                placeholder="Type spelling here..."
-                className="w-full text-center text-3xl font-bold text-stone-800 border-b-2 border-stone-200 focus:border-yellow-500 outline-none pb-2 mb-8 bg-transparent"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck="false"
-              />
+              {practiceMode === 'anagram' ? (
+                <>
+                  {/* Letras disponibles (mezcladas) */}
+                  <div className="mb-6">
+                    <p className="text-xs font-bold text-stone-400 uppercase mb-3">Available Letters</p>
+                    <div className="flex flex-wrap justify-center gap-2 min-h-[60px] p-4 bg-stone-50 rounded-xl border border-stone-200">
+                      {shuffledLetters.length === 0 ? (
+                        <p className="text-stone-400 text-sm italic">All letters used</p>
+                      ) : (
+                        shuffledLetters.map((letter, index) => (
+                          <button
+                            key={`${letter}-${index}`}
+                            type="button"
+                            onClick={() => handleLetterClick(letter, index)}
+                            className="w-12 h-12 bg-white border-2 border-stone-300 rounded-lg font-bold text-xl text-stone-800 hover:bg-purple-50 hover:border-purple-400 hover:scale-110 transition-all shadow-sm"
+                          >
+                            {letter.toUpperCase()}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Letras seleccionadas (respuesta del estudiante) */}
+                  <div className="mb-6">
+                    <p className="text-xs font-bold text-stone-400 uppercase mb-3">Your Answer</p>
+                    <div className="flex flex-wrap justify-center gap-2 min-h-[60px] p-4 bg-purple-50 rounded-xl border-2 border-purple-200">
+                      {selectedLetters.length === 0 ? (
+                        <p className="text-stone-400 text-sm italic">Click letters above to build the word</p>
+                      ) : (
+                        selectedLetters.map((letter, index) => (
+                          <button
+                            key={`selected-${index}`}
+                            type="button"
+                            onClick={() => handleRemoveLetter(index)}
+                            className="w-12 h-12 bg-purple-600 text-white border-2 border-purple-700 rounded-lg font-bold text-xl hover:bg-purple-700 hover:scale-110 transition-all shadow-md"
+                          >
+                            {letter.toUpperCase()}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Input de texto alternativo */}
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={userInput}
+                    onChange={(e) => {
+                      const newInput = e.target.value.toLowerCase();
+                      setUserInput(newInput);
+                      
+                      // Actualizar letras seleccionadas
+                      setSelectedLetters(newInput.split(''));
+                      
+                      // Recalcular letras disponibles basándose en la palabra original
+                      const available = recalculateAvailableLetters(newInput);
+                      setShuffledLetters(available);
+                    }}
+                    placeholder="Or type directly..."
+                    className="w-full text-center text-2xl font-bold text-stone-800 border-b-2 border-stone-200 focus:border-purple-500 outline-none pb-2 mb-4 bg-transparent"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
+                  />
+                </>
+              ) : (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  placeholder="Type spelling here..."
+                  className="w-full text-center text-3xl font-bold text-stone-800 border-b-2 border-stone-200 focus:border-yellow-500 outline-none pb-2 mb-8 bg-transparent"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck="false"
+                />
+              )}
               <button 
                 type="submit"
-                className="w-full py-3 bg-stone-800 hover:bg-stone-900 text-yellow-400 rounded-xl font-bold shadow-md transition-all"
+                disabled={!userInput.trim()}
+                className={`w-full py-3 rounded-xl font-bold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  practiceMode === 'anagram'
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                    : 'bg-stone-800 hover:bg-stone-900 text-yellow-400'
+                }`}
               >
                 Check Answer
               </button>

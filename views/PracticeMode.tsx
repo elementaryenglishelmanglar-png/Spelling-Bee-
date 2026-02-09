@@ -20,6 +20,11 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
   const [selectedStage, setSelectedStage] = useState<Stage>('Play-offs');
   const [selectedContestType, setSelectedContestType] = useState<ContestType>('Internal');
   const [moderatorName, setModeratorName] = useState('');
+  // Word generator configuration
+  const [generatorGrade, setGeneratorGrade] = useState<GradeLevel>(1);
+  const [wordRangeMin, setWordRangeMin] = useState<number | ''>(''); // índice inicial (1‑based)
+  const [wordRangeMax, setWordRangeMax] = useState<number | ''>(''); // índice final (1‑based)
+  const [avoidWordRepetition, setAvoidWordRepetition] = useState<boolean>(true);
   
   // Selection State for Setup
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
@@ -52,6 +57,10 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
 
   // Derived Data
   const gradeWords = useMemo(() => words.filter(w => w.grade === selectedGrade), [words, selectedGrade]);
+  const generatorWords = useMemo(
+    () => words.filter(w => w.grade === generatorGrade),
+    [words, generatorGrade]
+  );
   const availableStudents = useMemo(() => registeredStudents.filter(s => s.grade === selectedGrade), [registeredStudents, selectedGrade]);
   
   const currentStudent = students[currentStudentIndex];
@@ -61,6 +70,8 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
     if (phase === 'setup') {
       const ids = new Set(registeredStudents.filter(s => s.grade === selectedGrade).map(s => s.id));
       setSelectedStudentIds(ids);
+      // Por defecto, el generador usará la lista del mismo grado de la sesión
+      setGeneratorGrade(selectedGrade);
     }
   }, [selectedGrade, registeredStudents, phase]);
 
@@ -149,15 +160,42 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
   };
 
   const generateWord = () => {
-    // Filter out words already used in this session to avoid repeats if possible
-    const usedWordIds = new Set(attempts.map(a => a.wordId));
-    const availableWords = gradeWords.filter(w => !usedWordIds.has(w.id));
-    
-    // If we run out of fresh words, reuse efficiently
-    const pool = availableWords.length > 0 ? availableWords : gradeWords;
-    
+    // Base: palabras del grado configurado para el generador (puede ser distinto al grado de la sesión)
+    let basePool = generatorWords;
+
+    // Aplicar rango min‑max si se configuró (1‑based, inclusivo)
+    const total = basePool.length;
+    let startIndex = 0; // 0‑based
+    let endIndex = total - 1; // 0‑based
+
+    if (typeof wordRangeMin === 'number' && wordRangeMin > 0) {
+      startIndex = Math.min(wordRangeMin - 1, total - 1);
+    }
+    if (typeof wordRangeMax === 'number' && wordRangeMax > 0) {
+      endIndex = Math.min(wordRangeMax - 1, total - 1);
+    }
+    if (endIndex < startIndex) {
+      // Si el usuario pone un max menor que min, intercambiamos para no dejarlo sin rango
+      [startIndex, endIndex] = [endIndex, startIndex];
+    }
+
+    basePool = basePool.slice(startIndex, endIndex + 1);
+
+    if (basePool.length === 0) {
+      alert("No words available for the selected list / range.");
+      return;
+    }
+
+    // Evitar palabras repetidas durante la sesión si la opción está activa
+    let pool = basePool;
+    if (avoidWordRepetition) {
+      const usedWordIds = new Set(attempts.map(a => a.wordId));
+      const filtered = basePool.filter(w => !usedWordIds.has(w.id));
+      pool = filtered.length > 0 ? filtered : basePool; // Si se agotan, volvemos a usar toda la base
+    }
+
     if (pool.length === 0) {
-      alert("No words available for this grade.");
+      alert("No words available with the current settings.");
       return;
     }
 
@@ -341,6 +379,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
             </div>
           </div>
 
+
           {/* New Row: Stage & Contest Type */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-stone-50 rounded-xl border border-stone-200">
              <div>
@@ -518,37 +557,93 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
                     </div>
 
                     {!currentWord ? (
-                         isCustomWordMode ? (
-                            <div className="bg-white rounded-xl p-6 border-2 border-stone-200 shadow-inner h-48 flex flex-col justify-center">
-                                <h3 className="font-bold text-stone-800 mb-3 text-xs uppercase flex items-center gap-2"><Keyboard size={14}/> Manual Word Entry</h3>
-                                <form onSubmit={handleCustomWordSubmit}>
-                                    <input 
-                                        ref={customWordInputRef}
-                                        autoFocus
-                                        type="text" 
-                                        value={customWordInput}
-                                        onChange={e => setCustomWordInput(e.target.value)}
-                                        placeholder="Enter custom word..."
-                                        className="w-full text-xl font-bold p-3 border border-stone-300 rounded-lg mb-4 focus:ring-2 focus:ring-yellow-400 outline-none"
-                                    />
-                                    <div className="flex gap-2">
-                                        <button type="submit" className="flex-1 bg-stone-800 text-white py-2 rounded-lg font-bold hover:bg-stone-900 transition-colors">
-                                            Set Word
-                                        </button>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => { setIsCustomWordMode(false); setCustomWordInput(''); }}
-                                            className="px-4 py-2 text-stone-500 hover:bg-stone-100 rounded-lg font-bold transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
+                            <div className="h-64 border-2 border-dashed border-stone-200 rounded-xl flex flex-col items-stretch justify-center bg-stone-50 p-4 gap-4">
+                                <div className="w-full flex flex-col items-center">
+                                  <p className="text-[10px] font-bold text-stone-400 uppercase mb-1">Word Generator</p>
+                                </div>
+                                {/* Controles de lista y rango, ahora editables durante la ronda */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-stone-600 mb-1 flex items-center gap-1">
+                                      <Flag size={12}/> Word List
+                                    </label>
+                                    <select
+                                      value={generatorGrade}
+                                      onChange={(e) => setGeneratorGrade(Number(e.target.value) as GradeLevel)}
+                                      className="w-full p-2 border border-stone-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-200 outline-none"
+                                    >
+                                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
+                                        <option key={g} value={g}>
+                                          Grade {g} list ({words.filter(w => w.grade === g).length} words)
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-stone-600 mb-1">Word Range</label>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[10px] text-stone-500">From</span>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={words.filter(w => w.grade === generatorGrade).length || 1}
+                                        value={wordRangeMin === '' ? '' : wordRangeMin}
+                                        onChange={(e) => {
+                                          const raw = e.target.value;
+                                          if (raw === '') {
+                                            setWordRangeMin('');
+                                            return;
+                                          }
+                                          const parsed = Number(raw);
+                                          if (!Number.isNaN(parsed) && parsed > 0) {
+                                            setWordRangeMin(parsed);
+                                          }
+                                        }}
+                                        className="w-14 p-1 border border-stone-300 rounded text-[11px]"
+                                      />
+                                      <span className="text-[10px] text-stone-400">to</span>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={words.filter(w => w.grade === generatorGrade).length || 1}
+                                        value={wordRangeMax === '' ? '' : wordRangeMax}
+                                        onChange={(e) => {
+                                          const raw = e.target.value;
+                                          if (raw === '') {
+                                            setWordRangeMax('');
+                                            return;
+                                          }
+                                          const parsed = Number(raw);
+                                          if (!Number.isNaN(parsed) && parsed > 0) {
+                                            setWordRangeMax(parsed);
+                                          }
+                                        }}
+                                        className="w-14 p-1 border border-stone-300 rounded text-[11px]"
+                                      />
+                                      <span className="text-[10px] text-stone-400">
+                                        (1–{words.filter(w => w.grade === generatorGrade).length || 0})
+                                      </span>
                                     </div>
-                                </form>
-                            </div>
-                         ) : (
-                            <div className="h-48 border-2 border-dashed border-stone-200 rounded-xl flex flex-col items-center justify-center bg-stone-50 p-4">
-                                <p className="text-stone-400 font-medium mb-4">Ready for next word.</p>
-                                <div className="flex flex-col w-full gap-3 px-8">
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setAvoidWordRepetition(!avoidWordRepetition)}
+                                    className={`w-4 h-4 rounded border flex items-center justify-center ${
+                                      avoidWordRepetition ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-stone-300'
+                                    }`}
+                                  >
+                                    {avoidWordRepetition && <CheckSquare size={10} />}
+                                  </button>
+                                  <span className="text-[10px] text-stone-600 font-medium">
+                                    Avoid repeating words this contest
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-stone-400">
+                                  Adjust list or range at any time. Changes affect the next generated word.
+                                </p>
+                                <div className="flex flex-col w-full gap-3 pt-1">
                                     <button 
                                         onClick={generateWord}
                                         className="w-full py-3 bg-stone-800 text-yellow-400 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-lg"
@@ -557,23 +652,16 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
                                     </button>
                                     <div className="flex gap-2 w-full">
                                         <button 
-                                            onClick={() => { setIsCustomWordMode(true); setTimeout(() => customWordInputRef.current?.focus(), 50); }}
-                                            className="flex-1 py-3 bg-white text-stone-700 border border-stone-300 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-stone-50 transition-colors"
-                                        >
-                                            <Plus size={18} /> Manual Entry
-                                        </button>
-                                        <button 
                                             onClick={skipTurn}
                                             title="Records a SKIPPED turn for this student to align rounds"
-                                            className="px-4 py-3 bg-stone-100 text-stone-500 border border-stone-200 rounded-xl font-bold hover:bg-stone-200 hover:text-stone-700 transition-colors"
+                                            className="flex-1 px-4 py-3 bg-stone-100 text-stone-500 border border-stone-200 rounded-xl font-bold hover:bg-stone-200 hover:text-stone-700 transition-colors"
                                         >
                                             <FastForward size={18} />
                                         </button>
                                     </div>
-                                    <p className="text-[10px] text-stone-400 text-center mt-1">Use Skip button to insert a placeholder for missing students</p>
+                                    <p className="text-[10px] text-stone-400 text-center mt-1">Use Skip to insert a placeholder for missing students.</p>
                                 </div>
                             </div>
-                         )
                     ) : (
                         <div className="bg-orange-50 rounded-xl p-6 border border-orange-100 relative">
                              <div className="flex justify-between items-start mb-4">

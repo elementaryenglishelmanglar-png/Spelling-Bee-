@@ -1,12 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { WordEnrichmentResponse, GradeLevel } from "../types";
 
-const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+// Vite environment variable (defined as VITE_GEMINI_API_KEY in .env.local)
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+
+// Only create the client if we actually have a key, to avoid runtime crashes
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const enrichWordWithGemini = async (word: string, grade: GradeLevel): Promise<WordEnrichmentResponse> => {
-  if (!apiKey) {
-    throw new Error("API Key is missing");
+  if (!apiKey || !ai) {
+    throw new Error("Gemini API key is missing. Set VITE_GEMINI_API_KEY in your .env.local file.");
   }
 
   const model = "gemini-3-flash-preview";

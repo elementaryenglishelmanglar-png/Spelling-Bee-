@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { GradeLevel, WordEntry } from '../types';
 import { enrichWordWithGemini } from '../services/geminiService';
 import { Sparkles, Plus, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { useToast } from '../lib/toastContext';
 
 interface WordFormProps {
   currentGrade: GradeLevel;
@@ -9,6 +10,7 @@ interface WordFormProps {
 }
 
 export const WordForm: React.FC<WordFormProps> = ({ currentGrade, onAddWord }) => {
+  const { showToast } = useToast();
   const [inputWord, setInputWord] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +22,9 @@ export const WordForm: React.FC<WordFormProps> = ({ currentGrade, onAddWord }) =
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        setError("Image too large. Please keep under 2MB.");
+        const errorMsg = "Image too large. Please keep under 2MB.";
+        setError(errorMsg);
+        showToast(errorMsg, 'error');
         return;
       }
       const reader = new FileReader();
@@ -57,7 +61,9 @@ export const WordForm: React.FC<WordFormProps> = ({ currentGrade, onAddWord }) =
 
   const handleAIAdd = async () => {
     if (!inputWord.trim()) {
-      setError("Please enter a word first.");
+      const errorMsg = "Please enter a word first.";
+      setError(errorMsg);
+      showToast(errorMsg, 'warning');
       return;
     }
     setIsLoading(true);
@@ -74,8 +80,11 @@ export const WordForm: React.FC<WordFormProps> = ({ currentGrade, onAddWord }) =
       };
       onAddWord(newWord);
       resetForm();
+      showToast(`Word "${inputWord.trim()}" enriched with AI successfully!`, 'success');
     } catch (err) {
-      setError("Failed to fetch AI data. Check API key or internet.");
+      const errorMsg = "Failed to fetch AI data. Check API key or internet.";
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setIsLoading(false);
     }

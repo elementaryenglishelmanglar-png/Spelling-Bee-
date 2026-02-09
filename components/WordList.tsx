@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { WordEntry, GradeLevel } from '../types';
-import { Trash2, Volume2, Edit2, Check, X, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Volume2, Edit2, Check, X, Image as ImageIcon, Search, Filter, Download } from 'lucide-react';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface WordListProps {
   words: WordEntry[];
@@ -24,6 +25,7 @@ const WordListItem: React.FC<WordListItemProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState(word);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
@@ -187,21 +189,80 @@ const WordListItem: React.FC<WordListItemProps> = ({
           <Edit2 size={18} />
         </button>
         <button
-          onClick={() => onDelete(word.id)}
+          onClick={() => setShowDeleteConfirm(true)}
           className="text-stone-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors"
           title="Delete Word"
         >
           <Trash2 size={18} />
         </button>
       </div>
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title="Delete Word"
+        message={`Are you sure you want to delete "${word.word}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={() => {
+          onDelete(word.id);
+          setShowDeleteConfirm(false);
+        }}
+        onCancel={() => setShowDeleteConfirm(false)}
+        type="danger"
+      />
     </div>
   );
 };
 
 export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelete, onUpdate }) => {
-  const filteredWords = words.filter(w => w.grade === currentGrade);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'Easy' | 'Medium' | 'Hard'>('all');
+  const [showFilters, setShowFilters] = useState(false);
 
-  if (filteredWords.length === 0) {
+  const filteredWords = useMemo(() => {
+    let result = words.filter(w => w.grade === currentGrade);
+
+    // Filter by difficulty
+    if (difficultyFilter !== 'all') {
+      result = result.filter(w => w.difficulty === difficultyFilter);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(w => 
+        w.word.toLowerCase().includes(query) ||
+        w.definition.toLowerCase().includes(query) ||
+        w.example.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [words, currentGrade, difficultyFilter, searchQuery]);
+
+  const exportToCSV = () => {
+    const csvContent = [
+      ['Word', 'Definition', 'Example', 'Difficulty', 'Grade'],
+      ...filteredWords.map(w => [
+        w.word,
+        w.definition,
+        w.example,
+        w.difficulty || 'Medium',
+        w.grade.toString()
+      ])
+    ].map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `spelling-bee-grade-${currentGrade}-words.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (words.filter(w => w.grade === currentGrade).length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-stone-300 rounded-xl bg-orange-50/50">
         <p className="text-stone-500 text-lg font-medium">No words added for Grade {currentGrade} yet.</p>
@@ -212,15 +273,99 @@ export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelet
 
   return (
     <div className="space-y-4">
-      {filteredWords.map((word, index) => (
-        <WordListItem 
-          key={word.id} 
-          word={word} 
-          index={index} 
-          onDelete={onDelete} 
-          onUpdate={onUpdate}
-        />
-      ))}
+      {/* Search and Filter Bar */}
+      <div className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
+          <div className="flex-1 w-full md:w-auto">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search words, definitions, examples..."
+                className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-yellow-200 outline-none"
+              />
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                showFilters 
+                  ? 'bg-yellow-100 border-yellow-300 text-stone-800' 
+                  : 'bg-white border-stone-300 text-stone-600 hover:bg-stone-50'
+              }`}
+            >
+              <Filter size={16} />
+              <span className="text-sm font-medium">Filters</span>
+            </button>
+            
+            <button
+              onClick={exportToCSV}
+              className="flex items-center gap-2 px-4 py-2 bg-stone-800 text-white rounded-lg hover:bg-stone-900 transition-colors"
+              title="Export to CSV"
+            >
+              <Download size={16} />
+              <span className="text-sm font-medium">Export CSV</span>
+            </button>
+          </div>
+        </div>
+
+        {showFilters && (
+          <div className="mt-3 pt-3 border-t border-stone-200">
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs font-bold text-stone-500 uppercase self-center">Difficulty:</span>
+              {(['all', 'Easy', 'Medium', 'Hard'] as const).map(diff => (
+                <button
+                  key={diff}
+                  onClick={() => setDifficultyFilter(diff)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                    difficultyFilter === diff
+                      ? diff === 'all' 
+                        ? 'bg-stone-800 text-white' 
+                        : diff === 'Hard'
+                        ? 'bg-red-600 text-white'
+                        : diff === 'Medium'
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-green-600 text-white'
+                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                  }`}
+                >
+                  {diff === 'all' ? 'All' : diff}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Results count */}
+      {filteredWords.length !== words.filter(w => w.grade === currentGrade).length && (
+        <div className="text-sm text-stone-500">
+          Showing {filteredWords.length} of {words.filter(w => w.grade === currentGrade).length} words
+        </div>
+      )}
+
+      {/* Word List */}
+      {filteredWords.length === 0 ? (
+        <div className="text-center py-8 text-stone-400">
+          <p>No words match your search criteria.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredWords.map((word, index) => (
+            <WordListItem 
+              key={word.id} 
+              word={word} 
+              index={index} 
+              onDelete={onDelete} 
+              onUpdate={onUpdate}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
