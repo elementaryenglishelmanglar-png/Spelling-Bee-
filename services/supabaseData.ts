@@ -38,6 +38,7 @@ export async function fetchWords(): Promise<WordEntry[]> {
     grade: row.grade as GradeLevel,
     difficulty: row.difficulty ?? undefined,
     image: row.image_url ?? undefined,
+    audioUrl: row.audio_url ?? undefined,
   }));
 }
 
@@ -59,6 +60,7 @@ export async function addWord(entry: WordEntry): Promise<WordEntry> {
       grade: entry.grade,
       difficulty: entry.difficulty ?? null,
       image_url: imageUrl,
+      audio_url: entry.audioUrl ?? null,
     })
     .select()
     .single();
@@ -71,6 +73,7 @@ export async function addWord(entry: WordEntry): Promise<WordEntry> {
     grade: data.grade,
     difficulty: data.difficulty ?? undefined,
     image: data.image_url ?? undefined,
+    audioUrl: data.audio_url ?? undefined,
   };
 }
 
@@ -91,6 +94,7 @@ export async function updateWord(entry: WordEntry): Promise<WordEntry> {
     grade: entry.grade,
     difficulty: entry.difficulty ?? null,
     image_url: imageUrl,
+    audio_url: entry.audioUrl ?? null,
   };
   const { data, error } = await supabase.from('words').update(payload).eq('id', entry.id).select().single();
   if (error) throw error;
@@ -102,6 +106,7 @@ export async function updateWord(entry: WordEntry): Promise<WordEntry> {
     grade: data.grade,
     difficulty: data.difficulty ?? undefined,
     image: data.image_url ?? undefined,
+    audioUrl: data.audio_url ?? undefined,
   };
 }
 
