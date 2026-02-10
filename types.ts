@@ -8,6 +8,7 @@ export interface WordEntry {
   grade: GradeLevel;
   difficulty?: 'Easy' | 'Medium' | 'Hard';
   image?: string; // Base64 string for word flashcard image
+  audioUrl?: string; // URL for the pronunciation audio file
 }
 
 export interface WordEnrichmentResponse {
@@ -44,7 +45,7 @@ export interface Attempt {
   typedSpelling: string; // What the teacher typed
   protocolOpened: boolean; // "Say" before spelling
   protocolClosed: boolean; // "Say" after spelling
-  wordNumber: number; 
+  wordNumber: number;
   result: 'correct' | 'incorrect' | 'skipped';
   round: number;
   isExtra?: boolean; // For tie-breakers or extra words
@@ -66,11 +67,11 @@ export interface Session {
 
 export type Role = 'teacher' | 'student' | null;
 
-export type ViewState = 
-  | 'dashboard' 
-  | 'manage' 
-  | 'students' 
-  | 'session' 
+export type ViewState =
+  | 'dashboard'
+  | 'manage'
+  | 'students'
+  | 'session'
   | 'history'
   | 'student-generator'
   | 'student-drill';

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { WordEntry, GradeLevel } from '../types';
-import { Trash2, Volume2, Edit2, Check, X, Image as ImageIcon, Search, Filter, Download } from 'lucide-react';
+import { Trash2, Volume2, Edit2, Check, X, Image as ImageIcon, Search, Filter, Download, Upload, Mic } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
+import { supabase } from '../lib/supabase';
 
 interface WordListProps {
   words: WordEntry[];
@@ -10,23 +11,25 @@ interface WordListProps {
   onUpdate: (word: WordEntry) => void;
 }
 
-interface WordListItemProps { 
-  word: WordEntry; 
-  index: number; 
-  onDelete: (id: string) => void; 
-  onUpdate: (word: WordEntry) => void; 
+interface WordListItemProps {
+  word: WordEntry;
+  index: number;
+  onDelete: (id: string) => void;
+  onUpdate: (word: WordEntry) => void;
 }
 
-const WordListItem: React.FC<WordListItemProps> = ({ 
-  word, 
-  index, 
-  onDelete, 
-  onUpdate 
+const WordListItem: React.FC<WordListItemProps> = ({
+  word,
+  index,
+  onDelete,
+  onUpdate
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState(word);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
     onUpdate(editForm);
@@ -53,9 +56,51 @@ const WordListItem: React.FC<WordListItemProps> = ({
     }
   };
 
-  const speakWord = (text: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    window.speechSynthesis.speak(utterance);
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      alert("Audio file too large. Max 5MB.");
+      return;
+    }
+
+    try {
+      setIsUploadingAudio(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('word-audio')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('word-audio')
+        .getPublicUrl(fileName);
+
+      setEditForm({ ...editForm, audioUrl: publicUrl });
+    } catch (error) {
+      console.error('Error uploading audio:', error);
+      alert('Failed to upload audio. Please ensure you have created a public bucket named "word-audio" in Supabase.');
+    } finally {
+      setIsUploadingAudio(false);
+    }
+  };
+
+  const speakWord = (text: string, audioUrl?: string) => {
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(e => {
+        console.warn("Audio playback failed, falling back to synthesis", e);
+        const utterance = new SpeechSynthesisUtterance(text);
+        window.speechSynthesis.speak(utterance);
+      });
+    } else {
+      const utterance = new SpeechSynthesisUtterance(text);
+      window.speechSynthesis.speak(utterance);
+    }
   };
 
   if (isEditing) {
@@ -63,81 +108,114 @@ const WordListItem: React.FC<WordListItemProps> = ({
       <div className="bg-white p-4 rounded-xl border-2 border-yellow-400 shadow-md flex flex-col gap-4 animate-fade-in">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 space-y-3">
-             <div className="flex gap-4">
-                 {/* Image Edit */}
-                 <div 
-                    className="w-20 h-20 flex-shrink-0 rounded-lg bg-stone-50 border border-stone-200 overflow-hidden relative group cursor-pointer"
-                    onClick={() => fileInputRef.current?.click()}
-                 >
-                    {editForm.image ? (
-                        <img src={editForm.image} className="w-full h-full object-cover" alt="Word" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-stone-300">
-                            <ImageIcon size={24} />
-                        </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-white text-xs font-bold">Change</span>
-                    </div>
-                 </div>
-                 <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                 />
+            <div className="flex gap-4">
+              {/* Image Edit */}
+              <div
+                className="w-20 h-20 flex-shrink-0 rounded-lg bg-stone-50 border border-stone-200 overflow-hidden relative group cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+                title="Change Image"
+              >
+                {editForm.image ? (
+                  <img src={editForm.image} className="w-full h-full object-cover" alt="Word" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-stone-300">
+                    <ImageIcon size={24} />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-white text-xs font-bold">Change</span>
+                </div>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleImageUpload}
+              />
 
-                 <div className="flex-1">
-                    <label className="text-xs font-bold text-stone-500 uppercase">Word</label>
-                    <input 
-                        value={editForm.word}
-                        onChange={e => setEditForm({...editForm, word: e.target.value})}
-                        className="w-full p-2 border border-stone-300 rounded-lg font-bold text-stone-800 focus:ring-2 focus:ring-yellow-200 outline-none"
-                    />
-                 </div>
-             </div>
-             
-             <div>
-               <label className="text-xs font-bold text-stone-500 uppercase">Definition</label>
-               <textarea 
-                 value={editForm.definition}
-                 onChange={e => setEditForm({...editForm, definition: e.target.value})}
-                 className="w-full p-2 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-200 outline-none"
-                 rows={2}
-               />
-             </div>
-             <div>
-               <label className="text-xs font-bold text-stone-500 uppercase">Example</label>
-               <textarea 
-                 value={editForm.example}
-                 onChange={e => setEditForm({...editForm, example: e.target.value})}
-                 className="w-full p-2 border border-stone-300 rounded-lg text-sm italic focus:ring-2 focus:ring-yellow-200 outline-none"
-                 rows={2}
-               />
-             </div>
+              <div className="flex-1 space-y-2">
+                <div>
+                  <label className="text-xs font-bold text-stone-500 uppercase">Word</label>
+                  <input
+                    value={editForm.word}
+                    onChange={e => setEditForm({ ...editForm, word: e.target.value })}
+                    className="w-full p-2 border border-stone-300 rounded-lg font-bold text-stone-800 focus:ring-2 focus:ring-yellow-200 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Audio Upload */}
+            <div>
+              <label className="text-xs font-bold text-stone-500 uppercase flex items-center gap-2 mb-1">
+                <Mic size={12} /> Audio Pronunciation
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => audioInputRef.current?.click()}
+                  disabled={isUploadingAudio}
+                  className="px-3 py-2 bg-stone-100 border border-stone-300 rounded-lg text-xs font-bold text-stone-600 hover:bg-stone-200 flex items-center gap-2"
+                >
+                  <Upload size={14} /> {editForm.audioUrl ? 'Replace Audio' : 'Upload Audio'}
+                </button>
+                {isUploadingAudio && <span className="text-xs text-stone-400 animate-pulse">Uploading...</span>}
+                {editForm.audioUrl && !isUploadingAudio && (
+                  <div className="flex items-center gap-2 bg-green-50 px-2 py-1 rounded border border-green-200 text-green-700 text-xs">
+                    <span className="font-bold">Audio Set</span>
+                    <button onClick={() => speakWord(editForm.word, editForm.audioUrl)} className="hover:underline">Play</button>
+                  </div>
+                )}
+              </div>
+              <input
+                type="file"
+                ref={audioInputRef}
+                className="hidden"
+                accept="audio/*"
+                onChange={handleAudioUpload}
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-stone-500 uppercase">Definition</label>
+              <textarea
+                value={editForm.definition}
+                onChange={e => setEditForm({ ...editForm, definition: e.target.value })}
+                className="w-full p-2 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-200 outline-none"
+                rows={2}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-stone-500 uppercase">Example</label>
+              <textarea
+                value={editForm.example}
+                onChange={e => setEditForm({ ...editForm, example: e.target.value })}
+                className="w-full p-2 border border-stone-300 rounded-lg text-sm italic focus:ring-2 focus:ring-yellow-200 outline-none"
+                rows={2}
+              />
+            </div>
           </div>
           <div className="w-full md:w-48 space-y-3 flex flex-col">
-             <div>
-               <label className="text-xs font-bold text-stone-500 uppercase">Difficulty</label>
-               <select
-                  value={editForm.difficulty}
-                  onChange={e => setEditForm({...editForm, difficulty: e.target.value as any})}
-                  className="w-full p-2 border border-stone-300 rounded-lg text-sm"
-               >
-                 <option value="Easy">Easy</option>
-                 <option value="Medium">Medium</option>
-                 <option value="Hard">Hard</option>
-               </select>
-             </div>
-             <div className="flex gap-2 mt-auto">
-               <button onClick={handleSave} className="flex-1 bg-green-600 text-white p-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700">
-                 <Check size={16} /> Save
-               </button>
-               <button onClick={handleCancel} className="flex-1 bg-stone-200 text-stone-700 p-2 rounded-lg flex items-center justify-center gap-2 hover:bg-stone-300">
-                 <X size={16} />
-               </button>
-             </div>
+            <div>
+              <label className="text-xs font-bold text-stone-500 uppercase">Difficulty</label>
+              <select
+                value={editForm.difficulty}
+                onChange={e => setEditForm({ ...editForm, difficulty: e.target.value as any })}
+                className="w-full p-2 border border-stone-300 rounded-lg text-sm"
+              >
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
+            </div>
+            <div className="flex gap-2 mt-auto">
+              <button onClick={handleSave} className="flex-1 bg-green-600 text-white p-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700">
+                <Check size={16} /> Save
+              </button>
+              <button onClick={handleCancel} className="flex-1 bg-stone-200 text-stone-700 p-2 rounded-lg flex items-center justify-center gap-2 hover:bg-stone-300">
+                <X size={16} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -150,27 +228,26 @@ const WordListItem: React.FC<WordListItemProps> = ({
         <div className="flex-shrink-0 w-8 h-8 bg-yellow-100 text-yellow-800 rounded-full flex items-center justify-center font-bold text-sm mt-1 border border-yellow-200">
           {index + 1}
         </div>
-        
+
         {word.image && (
-            <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-stone-100 border border-stone-200 overflow-hidden">
-                <img src={word.image} alt={word.word} className="w-full h-full object-cover" />
-            </div>
+          <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-stone-100 border border-stone-200 overflow-hidden">
+            <img src={word.image} alt={word.word} className="w-full h-full object-cover" />
+          </div>
         )}
 
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h3 className="text-lg font-bold text-stone-800">{word.word}</h3>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-              word.difficulty === 'Hard' ? 'bg-red-100 text-red-700' :
-              word.difficulty === 'Medium' ? 'bg-orange-100 text-orange-700' :
-              'bg-green-100 text-green-700'
-            }`}>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${word.difficulty === 'Hard' ? 'bg-red-100 text-red-700' :
+                word.difficulty === 'Medium' ? 'bg-orange-100 text-orange-700' :
+                  'bg-green-100 text-green-700'
+              }`}>
               {word.difficulty || 'Medium'}
             </span>
-            <button 
-              onClick={() => speakWord(word.word)}
-              className="p-1.5 text-stone-400 hover:text-stone-800 hover:bg-stone-100 rounded-full transition-colors"
-              title="Pronounce"
+            <button
+              onClick={() => speakWord(word.word, word.audioUrl)}
+              className={`p-1.5 rounded-full transition-colors ${word.audioUrl ? 'text-blue-500 hover:bg-blue-50' : 'text-stone-400 hover:text-stone-800 hover:bg-stone-100'}`}
+              title={word.audioUrl ? "Play Recorded Audio" : "Pronounce (Robot)"}
             >
               <Volume2 size={16} />
             </button>
@@ -179,7 +256,7 @@ const WordListItem: React.FC<WordListItemProps> = ({
           <p className="text-sm text-stone-500 italic mt-0.5"><span className="font-semibold not-italic text-stone-400">Ex:</span> "{word.example}"</p>
         </div>
       </div>
-      
+
       <div className="flex gap-2 self-end sm:self-center opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={() => setIsEditing(true)}
@@ -229,7 +306,7 @@ export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelet
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(w => 
+      result = result.filter(w =>
         w.word.toLowerCase().includes(query) ||
         w.definition.toLowerCase().includes(query) ||
         w.example.toLowerCase().includes(query)
@@ -288,20 +365,19 @@ export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelet
               />
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                showFilters 
-                  ? 'bg-yellow-100 border-yellow-300 text-stone-800' 
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
+                  ? 'bg-yellow-100 border-yellow-300 text-stone-800'
                   : 'bg-white border-stone-300 text-stone-600 hover:bg-stone-50'
-              }`}
+                }`}
             >
               <Filter size={16} />
               <span className="text-sm font-medium">Filters</span>
             </button>
-            
+
             <button
               onClick={exportToCSV}
               className="flex items-center gap-2 px-4 py-2 bg-stone-800 text-white rounded-lg hover:bg-stone-900 transition-colors"
@@ -321,17 +397,16 @@ export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelet
                 <button
                   key={diff}
                   onClick={() => setDifficultyFilter(diff)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                    difficultyFilter === diff
-                      ? diff === 'all' 
-                        ? 'bg-stone-800 text-white' 
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${difficultyFilter === diff
+                      ? diff === 'all'
+                        ? 'bg-stone-800 text-white'
                         : diff === 'Hard'
-                        ? 'bg-red-600 text-white'
-                        : diff === 'Medium'
-                        ? 'bg-orange-600 text-white'
-                        : 'bg-green-600 text-white'
+                          ? 'bg-red-600 text-white'
+                          : diff === 'Medium'
+                            ? 'bg-orange-600 text-white'
+                            : 'bg-green-600 text-white'
                       : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                  }`}
+                    }`}
                 >
                   {diff === 'all' ? 'All' : diff}
                 </button>
@@ -356,11 +431,11 @@ export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelet
       ) : (
         <div className="space-y-4">
           {filteredWords.map((word, index) => (
-            <WordListItem 
-              key={word.id} 
-              word={word} 
-              index={index} 
-              onDelete={onDelete} 
+            <WordListItem
+              key={word.id}
+              word={word}
+              index={index}
+              onDelete={onDelete}
               onUpdate={onUpdate}
             />
           ))}
