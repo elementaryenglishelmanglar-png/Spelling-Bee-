@@ -81,9 +81,9 @@ const WordListItem: React.FC<WordListItemProps> = ({
         .getPublicUrl(fileName);
 
       setEditForm({ ...editForm, audioUrl: publicUrl });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading audio:', error);
-      alert('Failed to upload audio. Please ensure you have created a public bucket named "word-audio" in Supabase.');
+      alert(`Failed to upload audio: ${error.message || error.error_description || 'Unknown error'}`);
     } finally {
       setIsUploadingAudio(false);
     }
