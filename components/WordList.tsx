@@ -93,13 +93,10 @@ const WordListItem: React.FC<WordListItemProps> = ({
     if (audioUrl) {
       const audio = new Audio(audioUrl);
       audio.play().catch(e => {
-        console.warn("Audio playback failed, falling back to synthesis", e);
-        const utterance = new SpeechSynthesisUtterance(text);
-        window.speechSynthesis.speak(utterance);
+        console.warn("Audio playback failed", e);
       });
     } else {
-      const utterance = new SpeechSynthesisUtterance(text);
-      window.speechSynthesis.speak(utterance);
+      alert("No audio uploaded for this word.");
     }
   };
 
@@ -239,8 +236,8 @@ const WordListItem: React.FC<WordListItemProps> = ({
           <div className="flex items-center gap-3 flex-wrap">
             <h3 className="text-lg font-bold text-stone-800">{word.word}</h3>
             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${word.difficulty === 'Hard' ? 'bg-red-100 text-red-700' :
-                word.difficulty === 'Medium' ? 'bg-orange-100 text-orange-700' :
-                  'bg-green-100 text-green-700'
+              word.difficulty === 'Medium' ? 'bg-orange-100 text-orange-700' :
+                'bg-green-100 text-green-700'
               }`}>
               {word.difficulty || 'Medium'}
             </span>
@@ -370,8 +367,8 @@ export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelet
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
-                  ? 'bg-yellow-100 border-yellow-300 text-stone-800'
-                  : 'bg-white border-stone-300 text-stone-600 hover:bg-stone-50'
+                ? 'bg-yellow-100 border-yellow-300 text-stone-800'
+                : 'bg-white border-stone-300 text-stone-600 hover:bg-stone-50'
                 }`}
             >
               <Filter size={16} />
@@ -398,14 +395,14 @@ export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelet
                   key={diff}
                   onClick={() => setDifficultyFilter(diff)}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${difficultyFilter === diff
-                      ? diff === 'all'
-                        ? 'bg-stone-800 text-white'
-                        : diff === 'Hard'
-                          ? 'bg-red-600 text-white'
-                          : diff === 'Medium'
-                            ? 'bg-orange-600 text-white'
-                            : 'bg-green-600 text-white'
-                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    ? diff === 'all'
+                      ? 'bg-stone-800 text-white'
+                      : diff === 'Hard'
+                        ? 'bg-red-600 text-white'
+                        : diff === 'Medium'
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-green-600 text-white'
+                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                     }`}
                 >
                   {diff === 'all' ? 'All' : diff}

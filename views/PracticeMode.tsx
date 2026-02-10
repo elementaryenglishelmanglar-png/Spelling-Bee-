@@ -246,21 +246,10 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
     if (currentWord && currentWord.audioUrl) {
       const audio = new Audio(currentWord.audioUrl);
       audio.play().catch(e => {
-        console.warn("Manual audio playback failed, falling back to synthesis", e);
-        // Fallback
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.85;
-        window.speechSynthesis.speak(utterance);
+        console.warn("Manual audio playback failed", e);
       });
       return;
     }
-
-    // Default Fallback: Browser Synthesis
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.85;
-    window.speechSynthesis.speak(utterance);
   };
 
   const submitTurn = () => {
