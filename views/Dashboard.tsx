@@ -11,11 +11,11 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeView, beeImageUrl }) => {
-  const grades = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-  
+  const grades = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
   const gradeData = useMemo(() => grades.map((grade) => ({
-    name: `G${grade}`,
-    fullName: `Grade ${grade}`,
+    name: grade === 12 ? 'G3' : `G${grade}`,
+    fullName: grade === 12 ? 'Group 3' : `Grade ${grade}`,
     count: words.filter((w) => w.grade === grade).length,
   })), [words]);
 
@@ -34,8 +34,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
     return grades.map(grade => {
       const gradeWords = words.filter(w => w.grade === grade);
       return {
-        name: `G${grade}`,
-        fullName: `Grade ${grade}`,
+        name: grade === 12 ? 'G3' : `G${grade}`,
+        fullName: grade === 12 ? 'Group 3' : `Grade ${grade}`,
         Easy: gradeWords.filter(w => w.difficulty === 'Easy').length,
         Medium: gradeWords.filter(w => w.difficulty === 'Medium' || !w.difficulty).length,
         Hard: gradeWords.filter(w => w.difficulty === 'Hard').length,
@@ -51,7 +51,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
   // Most failed words ranking
   const mostFailedWords = useMemo(() => {
     const wordFailures: Record<string, { word: string; failures: number; attempts: number }> = {};
-    
+
     sessions.forEach(session => {
       session.attempts.forEach(attempt => {
         if (attempt.result === 'incorrect' && attempt.wordText !== 'SKIPPED') {
@@ -85,7 +85,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
   // Student performance
   const studentPerformance = useMemo(() => {
     const perf: Record<string, { name: string; correct: number; incorrect: number; total: number }> = {};
-    
+
     sessions.forEach(session => {
       session.attempts.forEach(attempt => {
         if (attempt.result !== 'skipped') {
@@ -119,10 +119,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
   // Time trend data - sessions over time
   const timeTrendData = useMemo(() => {
     if (sessions.length === 0) return [];
-    
+
     // Group sessions by date (day)
     const sessionsByDate: Record<string, { date: string; sessions: number; accuracy: number; totalAttempts: number }> = {};
-    
+
     sessions.forEach(session => {
       const dateKey = new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       if (!sessionsByDate[dateKey]) {
@@ -148,14 +148,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
     <div className="space-y-8 animate-fade-in">
       <header className="mb-8 relative bg-white p-8 rounded-3xl border border-stone-200 shadow-sm overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="relative z-10 max-w-lg">
-             <h2 className="text-4xl font-black text-stone-800 mb-2">Contest Overview</h2>
-             <p className="text-stone-500 text-lg">Welcome back, Teacher! Your spelling bee headquarters is ready.</p>
+          <h2 className="text-4xl font-black text-stone-800 mb-2">Contest Overview</h2>
+          <p className="text-stone-500 text-lg">Welcome back, Teacher! Your spelling bee headquarters is ready.</p>
         </div>
-        
+
         {beeImageUrl && (
-            <div className="hidden md:block absolute right-[-20px] top-[-30px] w-48 h-48 opacity-20 md:opacity-100 md:relative md:w-40 md:h-40 md:top-auto md:right-auto animate-bounce-slow" style={{ animationDuration: '4s' }}>
-                <img src={beeImageUrl} alt="Bee Mascot" className="w-full h-full object-contain drop-shadow-lg transform -rotate-12" />
-            </div>
+          <div className="hidden md:block absolute right-[-20px] top-[-30px] w-48 h-48 opacity-20 md:opacity-100 md:relative md:w-40 md:h-40 md:top-auto md:right-auto animate-bounce-slow" style={{ animationDuration: '4s' }}>
+            <img src={beeImageUrl} alt="Bee Mascot" className="w-full h-full object-contain drop-shadow-lg transform -rotate-12" />
+          </div>
         )}
       </header>
 
@@ -180,7 +180,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
             <p className="text-3xl font-bold text-stone-900">{totalWords > 20 ? 'Yes' : 'Not Yet'}</p>
           </div>
         </div>
-        
+
         <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300">
           <div className="p-4 bg-green-100 text-green-600 rounded-xl">
             <TrendingUp size={32} />
@@ -208,21 +208,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
         <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm">
           <h3 className="text-lg font-bold text-stone-800 mb-6">Word Distribution by Grade</h3>
           <div className="h-64 w-full min-h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={300}>
               <BarChart data={gradeData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: '#78716c', fontSize: 11}} 
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#78716c', fontSize: 11 }}
                   dy={10}
                   angle={-45}
                   textAnchor="end"
                   height={60}
                 />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#78716c', fontSize: 11}} width={30} />
-                <Tooltip 
-                  cursor={{fill: 'transparent'}}
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#78716c', fontSize: 11 }} width={30} />
+                <Tooltip
+                  cursor={{ fill: 'transparent' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
                   labelFormatter={(value, payload) => {
                     if (payload && payload.length > 0) {
@@ -245,7 +245,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
         <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm">
           <h3 className="text-lg font-bold text-stone-800 mb-6">Difficulty Distribution</h3>
           <div className="h-64 w-full min-h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={300}>
               <PieChart>
                 <Pie
                   data={difficultyData}
@@ -274,18 +274,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
           <div className="h-64 w-full min-h-[200px] overflow-x-auto">
             <ResponsiveContainer width="100%" height="100%" minWidth={400}>
               <BarChart data={difficultyByGrade} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: '#78716c', fontSize: 11}} 
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#78716c', fontSize: 11 }}
                   angle={-45}
                   textAnchor="end"
                   height={60}
                 />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#78716c', fontSize: 11}} width={30} />
-                <Tooltip 
-                  cursor={{fill: 'transparent'}}
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#78716c', fontSize: 11 }} width={30} />
+                <Tooltip
+                  cursor={{ fill: 'transparent' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -304,34 +304,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
             <div className="h-64 w-full min-h-[200px] overflow-x-auto">
               <ResponsiveContainer width="100%" height="100%" minWidth={400}>
                 <LineChart data={timeTrendData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <XAxis 
-                    dataKey="date" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{fill: '#78716c', fontSize: 11}} 
+                  <XAxis
+                    dataKey="date"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#78716c', fontSize: 11 }}
                     angle={-45}
                     textAnchor="end"
                     height={60}
                   />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#78716c', fontSize: 11}} width={40} />
-                  <Tooltip 
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#78716c', fontSize: 11 }} width={40} />
+                  <Tooltip
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="sessions" 
-                    stroke="#EAB308" 
-                    strokeWidth={2} 
-                    dot={{ fill: '#EAB308', r: 4 }} 
+                  <Line
+                    type="monotone"
+                    dataKey="sessions"
+                    stroke="#EAB308"
+                    strokeWidth={2}
+                    dot={{ fill: '#EAB308', r: 4 }}
                     name="Sessions"
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="avgAccuracy" 
-                    stroke="#22c55e" 
-                    strokeWidth={2} 
-                    dot={{ fill: '#22c55e', r: 4 }} 
+                  <Line
+                    type="monotone"
+                    dataKey="avgAccuracy"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    dot={{ fill: '#22c55e', r: 4 }}
                     name="Avg Accuracy %"
                   />
                 </LineChart>
@@ -406,14 +406,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
 
       {/* Action Buttons */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button 
+        <button
           onClick={() => onChangeView('manage')}
           className="p-6 bg-stone-800 rounded-xl text-yellow-400 font-bold text-lg hover:shadow-lg transition-all hover:scale-[1.01] flex flex-col items-center justify-center border border-stone-900"
         >
           <span>Manage Word Lists</span>
           <span className="text-sm font-normal text-stone-400 mt-1">Add or edit definitions</span>
         </button>
-        <button 
+        <button
           onClick={() => onChangeView('session')}
           className="p-6 bg-yellow-400 border border-yellow-500 rounded-xl text-stone-900 font-bold text-lg hover:bg-yellow-300 hover:shadow-lg transition-all hover:scale-[1.01] flex flex-col items-center justify-center"
         >

@@ -8,9 +8,13 @@ import { WordForm } from './components/WordForm';
 import { WelcomeScreen } from './views/WelcomeScreen';
 import { StudentGenerator } from './views/StudentGenerator';
 import { StudentDrill } from './views/StudentDrill';
-import { StudentsManager } from './views/StudentsManager'; // New View
-import { LayoutDashboard, List, Play, Book, History, LogOut, Sparkles, GraduationCap, Users } from 'lucide-react';
-import { hasTeacherSession, clearTeacherSession } from './lib/auth';
+import { StudentsManager } from './views/StudentsManager';
+import { InvitedSchoolDashboard } from './views/InvitedSchoolDashboard';
+import { InterschoolManager } from './views/InterschoolManager';
+import { Leaderboard } from './views/Leaderboard';
+
+import { LayoutDashboard, List, Play, Book, History, LogOut, Sparkles, GraduationCap, Users, School as SchoolIcon, Globe, Trophy } from 'lucide-react';
+import { hasTeacherSession, clearTeacherSession, hasSchoolSession, getSchoolSession, clearSchoolSession, SchoolSessionData } from './lib/auth';
 import { ToastProvider, useToast } from './lib/toastContext';
 import { ToastContainer } from './components/Toast';
 import { LoadingOverlay } from './components/LoadingSpinner';
@@ -27,6 +31,7 @@ import {
   updateStudent as updateStudentInSupabase,
   deleteStudent as deleteStudentFromSupabase,
   addSession as addSessionToSupabase,
+  deleteSession,
 } from './services/supabaseData';
 
 const WORDS_STORAGE_KEY = 'spellbound_words_v1';
@@ -38,9 +43,17 @@ const BEE_IMAGE_URL = "/bee.png";
 
 const AppContent: React.FC = () => {
   const { showToast, toasts, removeToast } = useToast();
-  const [role, setRole] = useState<Role>(() => (hasTeacherSession() ? 'teacher' : null));
+
+  const [role, setRole] = useState<Role>(() => {
+    if (hasTeacherSession()) return 'teacher';
+    if (hasSchoolSession()) return 'school';
+    return null;
+  });
+
+  const [schoolSession, setSchoolSession] = useState<SchoolSessionData | null>(() => getSchoolSession());
+
   const [view, setView] = useState<ViewState>('dashboard');
-  
+
   const [words, setWords] = useState<WordEntry[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [students, setStudents] = useState<StudentProfile[]>([]);
@@ -48,6 +61,7 @@ const AppContent: React.FC = () => {
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   const [savingSession, setSavingSession] = useState(false);
+  const [activeStudent, setActiveStudent] = useState<StudentProfile | null>(null);
 
   // Cargar datos: Supabase o localStorage
   useEffect(() => {
@@ -129,11 +143,23 @@ const AppContent: React.FC = () => {
     // Set default view based on role
     if (newRole === 'teacher') setView('dashboard');
     if (newRole === 'student') setView('student-generator');
+    if (newRole === 'school') {
+      const session = getSchoolSession();
+      if (session) {
+        setSchoolSession(session);
+      }
+      // InvitedSchoolDashboard doesn't use 'view' state the same way, it has internal tabs, 
+      // or we can map it. For now, we just render the component.
+    }
   };
 
   const handleLogout = () => {
     clearTeacherSession();
+    clearSchoolSession();
     setRole(null);
+    setSchoolSession(null);
+    setActiveStudent(null);
+    setView('dashboard'); // Reset view
   };
 
   const addWord = async (newWord: WordEntry) => {
@@ -244,14 +270,13 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const NavButton = ({ target, icon: Icon, label }: { target: ViewState, icon: any, label: string }) => (
+  const NavButton = ({ target, icon: Icon, label }: { target: ViewState | 'interschool', icon: any, label: string }) => (
     <button
-      onClick={() => setView(target)}
-      className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all text-sm font-bold ${
-        view === target 
-          ? role === 'teacher' ? 'bg-stone-800 text-yellow-400' : 'bg-yellow-400 text-stone-900 shadow-sm'
-          : 'text-stone-500 hover:bg-orange-50 hover:text-stone-800'
-      }`}
+      onClick={() => setView(target as ViewState)}
+      className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all text-sm font-bold ${view === target
+        ? role === 'teacher' ? 'bg-stone-800 text-yellow-400' : 'bg-yellow-400 text-stone-900 shadow-sm'
+        : 'text-stone-500 hover:bg-orange-50 hover:text-stone-800'
+        }`}
     >
       <Icon size={18} />
       <span className="hidden sm:inline">{label}</span>
@@ -263,7 +288,18 @@ const AppContent: React.FC = () => {
     return <WelcomeScreen onSelectRole={handleRoleSelect} beeImageUrl={BEE_IMAGE_URL} />;
   }
 
-  // 2. Loading inicial de datos
+  // 2. School Dashboard (No global nav for this role, it has its own)
+  if (role === 'school') {
+    if (!schoolSession) return <WelcomeScreen onSelectRole={handleRoleSelect} beeImageUrl={BEE_IMAGE_URL} />;
+    return (
+      <div className="font-sans">
+        <InvitedSchoolDashboard school={schoolSession} onLogout={handleLogout} />
+        <ToastContainer toasts={toasts} onClose={removeToast} />
+      </div>
+    );
+  }
+
+  // 3. Loading inicial de datos
   if (dataLoading) {
     return (
       <div className="min-h-screen bg-orange-50/30 flex items-center justify-center font-sans">
@@ -275,7 +311,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // 3. Main App Layout
+  // 4. Main App Layout (Admin & Student)
   return (
     <div className="min-h-screen bg-orange-50/30 flex flex-col font-sans">
       <LoadingOverlay isLoading={savingSession} text="Saving session..." />
@@ -293,31 +329,38 @@ const AppContent: React.FC = () => {
                 <Book size={20} strokeWidth={2.5} />
               </div>
               <span className="text-lg sm:text-xl font-bold text-stone-800">
-                Spelling Bee <span className="hidden sm:inline text-stone-400">|</span> <span className="text-stone-500 text-sm font-medium uppercase tracking-widest ml-1">{role}</span>
+                Spelling Bee <span className="hidden sm:inline text-stone-400">|</span> <span className="text-stone-500 text-sm font-medium uppercase tracking-widest ml-1">{role === 'teacher' ? 'Admin' : role}</span>
               </span>
+              <button onClick={() => setView('history')} className={`p-2 rounded-lg transition-colors ${view === 'history' ? 'bg-yellow-100 text-yellow-700' : 'hover:bg-stone-100 text-stone-500'}`} title="History">
+                <History size={20} />
+              </button>
+              <button onClick={() => setView('leaderboard')} className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${view === 'leaderboard' ? 'bg-yellow-100 text-yellow-700' : 'hover:bg-stone-100 text-stone-500'}`} title="Leaderboard">
+                <Trophy size={20} />
+                <span className="font-bold">Leaderboard</span>
+              </button>
             </div>
-            
+
             <div className="flex items-center gap-1 sm:gap-2">
               {role === 'teacher' && (
                 <>
                   <NavButton target="dashboard" icon={LayoutDashboard} label="Dashboard" />
                   <NavButton target="students" icon={Users} label="Students" />
+                  <NavButton target="interschool" icon={Globe} label="Interschool" />
                   <NavButton target="manage" icon={List} label="Lists" />
                   <NavButton target="session" icon={Play} label="Session" />
                   <NavButton target="history" icon={History} label="History" />
                 </>
               )}
-              
+
               {role === 'student' && (
                 <>
-                  <NavButton target="student-generator" icon={Sparkles} label="Practice" />
-                  <NavButton target="student-drill" icon={GraduationCap} label="Exercises" />
+                  <NavButton target="student-generator" icon={Sparkles} label="Student Zone" />
                 </>
               )}
 
               <div className="h-6 w-px bg-stone-200 mx-2"></div>
-              
-              <button 
+
+              <button
                 onClick={handleLogout}
                 className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                 title="Switch Role / Logout"
@@ -331,24 +374,29 @@ const AppContent: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* --- TEACHER VIEWS --- */}
+
+        {/* --- TEACHER / ADMIN VIEWS --- */}
         {role === 'teacher' && (
           <>
             {view === 'dashboard' && <Dashboard words={words} sessions={sessions} onChangeView={setView} beeImageUrl={BEE_IMAGE_URL} />}
-            
+
             {view === 'students' && (
-                <StudentsManager 
-                    students={students} 
-                    onAddStudent={addStudent} 
-                    onUpdateStudent={updateStudent}
-                    onDeleteStudent={deleteStudent} 
-                />
+              <StudentsManager
+                students={students}
+                onAddStudent={addStudent}
+                onUpdateStudent={updateStudent}
+                onDeleteStudent={deleteStudent}
+              />
             )}
-            
+
+            {/* @ts-ignore - view type expansion hack if needed, or better added to ViewState */}
+            {view === 'interschool' && (
+              <InterschoolManager />
+            )}
+
             {view === 'manage' && (
               <div className="animate-fade-in space-y-6">
-                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <h2 className="text-2xl font-bold text-stone-800">Manage Word Lists</h2>
                     <p className="text-stone-500">Add, remove, and review words for each grade level.</p>
@@ -358,11 +406,10 @@ const AppContent: React.FC = () => {
                       <button
                         key={g}
                         onClick={() => setManageGrade(g as GradeLevel)}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
-                          manageGrade === g
-                            ? 'bg-yellow-400 text-stone-900 shadow-md'
-                            : 'text-stone-500 hover:bg-orange-50 hover:text-stone-800'
-                        }`}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${manageGrade === g
+                          ? 'bg-yellow-400 text-stone-900 shadow-md'
+                          : 'text-stone-500 hover:bg-orange-50 hover:text-stone-800'
+                          }`}
                       >
                         Grade {g}
                       </button>
@@ -378,10 +425,10 @@ const AppContent: React.FC = () => {
                       {words.filter(w => w.grade === manageGrade).length} words
                     </span>
                   </h3>
-                  <WordList 
-                    words={words} 
-                    currentGrade={manageGrade} 
-                    onDelete={deleteWord} 
+                  <WordList
+                    words={words}
+                    currentGrade={manageGrade}
+                    onDelete={deleteWord}
                     onUpdate={updateWord}
                   />
                 </div>
@@ -389,32 +436,61 @@ const AppContent: React.FC = () => {
             )}
 
             {view === 'session' && (
-              <PracticeMode 
-                words={words} 
+              <PracticeMode
+                words={words}
                 registeredStudents={students}
-                onSaveSession={saveSession} 
+                onSaveSession={saveSession}
               />
             )}
 
             {view === 'history' && (
-              <HistoryView sessions={sessions} />
+              <HistoryView
+                sessions={sessions}
+                onDeleteSession={async (id) => {
+                  if (isSupabaseConfigured()) {
+                    try {
+                      await deleteSession(id); // Ensure deleteSession is imported from services
+                      setSessions(prev => prev.filter(s => s.id !== id));
+                      showToast('Session deleted', 'success');
+                    } catch (e) {
+                      showToast('Error deleting session', 'error');
+                    }
+                  } else {
+                    setSessions(prev => prev.filter(s => s.id !== id));
+                    showToast('Session deleted', 'success');
+                  }
+                }}
+              />
             )}
+            {view === 'leaderboard' && <Leaderboard />}
           </>
         )}
 
         {/* --- STUDENT VIEWS --- */}
         {role === 'student' && (
           <>
-            {view === 'student-generator' && <StudentGenerator words={words} beeImageUrl={BEE_IMAGE_URL} />}
-            {view === 'student-drill' && <StudentDrill words={words} />}
+            {view === 'student-generator' && (
+              <StudentGenerator
+                words={words}
+                beeImageUrl={BEE_IMAGE_URL}
+                activeStudent={activeStudent}
+                onLogin={setActiveStudent}
+              />
+            )}
+            {view === 'student-drill' && (
+              <StudentDrill
+                words={words}
+                activeStudent={activeStudent}
+              />
+            )}
           </>
         )}
 
       </main>
-      
+
       <footer className="bg-white border-t border-stone-200 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center text-stone-400 text-sm">
-          <p>© {new Date().getFullYear()} Spelling Bee Manager. Powered by Gemini API.</p>
+          <p>© {new Date().getFullYear()} Colegio Integral El Manglar , Brindando oportunidades de vida a nuestros estudiantes</p>
         </div>
       </footer>
       <ToastContainer toasts={toasts} onClose={removeToast} />

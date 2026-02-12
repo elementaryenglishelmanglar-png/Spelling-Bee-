@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { WordEntry, GradeLevel } from '../types';
+import { WordEntry, GradeLevel, StudentProfile } from '../types';
 import { Volume2, CheckCircle, XCircle, ChevronRight, Trophy, Shuffle } from 'lucide-react';
+import { recordStudentStat } from '../services/supabaseData';
 
 type PracticeMode = 'spelling' | 'anagram';
 
 interface StudentDrillProps {
   words: WordEntry[];
+  activeStudent: StudentProfile | null;
 }
 
 // Función para mezclar letras de una palabra
@@ -18,8 +20,8 @@ const shuffleLetters = (word: string): string[] => {
   return letters;
 };
 
-export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
-  const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(1);
+export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent }) => {
+  const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(activeStudent?.grade || 1);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('spelling');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentWord, setCurrentWord] = useState<WordEntry | null>(null);
@@ -29,6 +31,12 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
   const [score, setScore] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (activeStudent) {
+      setSelectedGrade(activeStudent.grade);
+    }
+  }, [activeStudent]);
 
   const gradeWords = useMemo(() => words.filter(w => w.grade === selectedGrade), [words, selectedGrade]);
 
@@ -48,7 +56,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
 
     // Si es modo anagrama, mezclar las letras
     if (practiceMode === 'anagram') {
-      const shuffled = shuffleLetters(random.word.toLowerCase());
+      const shuffled = shuffleLetters(random.word);
       setShuffledLetters(shuffled);
     }
 
@@ -96,9 +104,9 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
   // Función helper para recalcular letras disponibles basándose en la palabra original y el input del usuario
   const recalculateAvailableLetters = (inputText: string): string[] => {
     if (!currentWord) return [];
-    const originalWord = currentWord.word.toLowerCase();
+    const originalWord = currentWord.word;
     const originalLetters = originalWord.split('');
-    const inputLetters = inputText.toLowerCase().split('');
+    const inputLetters = inputText.split('');
 
     // Contar cuántas veces aparece cada letra en el input
     const inputCount: Record<string, number> = {};
@@ -126,18 +134,38 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
     return available;
   };
 
+  const startTime = useRef<number>(0);
+
+  // Reset timer on new word
+  useEffect(() => {
+    if (currentWord) startTime.current = Date.now();
+  }, [currentWord]);
+
   const checkSpelling = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentWord || !userInput.trim()) return;
 
     const userAnswer = userInput.trim().toLowerCase();
     const correctAnswer = currentWord.word.toLowerCase();
+    const isCorrect = userAnswer === correctAnswer;
+    const timeTaken = Math.round((Date.now() - startTime.current) / 1000);
+    const points = isCorrect ? 15 : 0;
 
-    if (userAnswer === correctAnswer) {
+    if (isCorrect) {
       setFeedback('correct');
-      setScore(s => s + 10);
+      setScore(s => s + points);
     } else {
       setFeedback('incorrect');
+    }
+
+    if (activeStudent) {
+      recordStudentStat({
+        studentId: activeStudent.id,
+        wordId: currentWord.id,
+        isCorrect,
+        timeTaken,
+        pointsEarned: points
+      });
     }
   };
 
@@ -180,21 +208,9 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
         </div>
 
         <div className="mb-8">
-          <label className="block text-sm font-bold text-stone-400 uppercase mb-2">Select Grade Level</label>
-          <div className="flex justify-center flex-wrap gap-2">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((g) => (
-              <button
-                key={g}
-                onClick={() => setSelectedGrade(g as GradeLevel)}
-                className={`w-10 h-10 rounded-lg font-bold transition-all ${selectedGrade === g
-                  ? 'bg-green-600 text-white shadow-lg scale-110'
-                  : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
-                  }`}
-              >
-                {g}
-              </button>
-            ))}
-          </div>
+          <p className="text-stone-600 font-medium">
+            You are practicing <span className="font-bold text-green-700">Grade {selectedGrade}</span> words.
+          </p>
           <p className="text-xs text-stone-400 mt-2">{gradeWords.length} words available</p>
         </div>
 
@@ -262,7 +278,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
                             onClick={() => handleLetterClick(letter, index)}
                             className="w-12 h-12 bg-white border-2 border-stone-300 rounded-lg font-bold text-xl text-stone-800 hover:bg-purple-50 hover:border-purple-400 hover:scale-110 transition-all shadow-sm"
                           >
-                            {letter.toUpperCase()}
+                            {letter}
                           </button>
                         ))
                       )}
@@ -283,7 +299,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
                             onClick={() => handleRemoveLetter(index)}
                             className="w-12 h-12 bg-purple-600 text-white border-2 border-purple-700 rounded-lg font-bold text-xl hover:bg-purple-700 hover:scale-110 transition-all shadow-md"
                           >
-                            {letter.toUpperCase()}
+                            {letter}
                           </button>
                         ))
                       )}
@@ -296,7 +312,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words }) => {
                     type="text"
                     value={userInput}
                     onChange={(e) => {
-                      const newInput = e.target.value.toLowerCase();
+                      const newInput = e.target.value;
                       setUserInput(newInput);
 
                       // Actualizar letras seleccionadas

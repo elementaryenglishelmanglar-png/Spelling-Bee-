@@ -30,18 +30,19 @@ export function validateTeacherCredentials(username: string, password: string): 
   return list.some((c) => c.username === username && c.password === password);
 }
 
+// --- Admin Session (formerly Teacher) ---
 const TEACHER_SESSION_KEY = 'spelling_bee_teacher_session';
 
 export function setTeacherSession(): void {
   try {
     sessionStorage.setItem(TEACHER_SESSION_KEY, 'true');
-  } catch (_) {}
+  } catch (_) { }
 }
 
 export function clearTeacherSession(): void {
   try {
     sessionStorage.removeItem(TEACHER_SESSION_KEY);
-  } catch (_) {}
+  } catch (_) { }
 }
 
 export function hasTeacherSession(): boolean {
@@ -50,4 +51,38 @@ export function hasTeacherSession(): boolean {
   } catch (_) {
     return false;
   }
+}
+
+// --- School Session ---
+const SCHOOL_SESSION_KEY = 'spelling_bee_school_session';
+
+export interface SchoolSessionData {
+  id: string;
+  name: string;
+  username: string;
+}
+
+export function setSchoolSession(data: SchoolSessionData): void {
+  try {
+    sessionStorage.setItem(SCHOOL_SESSION_KEY, JSON.stringify(data));
+  } catch (_) { }
+}
+
+export function getSchoolSession(): SchoolSessionData | null {
+  try {
+    const data = sessionStorage.getItem(SCHOOL_SESSION_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function clearSchoolSession(): void {
+  try {
+    sessionStorage.removeItem(SCHOOL_SESSION_KEY);
+  } catch (_) { }
+}
+
+export function hasSchoolSession(): boolean {
+  return !!getSchoolSession();
 }

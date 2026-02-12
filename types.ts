@@ -1,4 +1,4 @@
-export type GradeLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+export type GradeLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
 export interface WordEntry {
   id: string;
@@ -24,7 +24,30 @@ export interface StudentProfile {
   lastName: string;
   school: string;
   grade: GradeLevel;
+  schoolId?: string; // Link to the Invited School
   photo?: string; // Base64 string of the student's photo
+  username?: string;
+  password?: string;
+  total_xp?: number;
+  current_streak?: number;
+  last_practice_date?: string;
+}
+
+export interface Achievement {
+  id: string;
+  studentId: string;
+  badgeKey: string;
+  unlockedAt: string;
+}
+
+export interface StudentStat {
+  id: string;
+  studentId: string;
+  wordId: string;
+  isCorrect: boolean;
+  timeTaken: number;
+  pointsEarned: number;
+  createdAt: string;
 }
 
 // The active participant in a specific session
@@ -65,7 +88,25 @@ export interface Session {
   durationSeconds: number;
 }
 
-export type Role = 'teacher' | 'student' | null;
+export interface School {
+  id: string;
+  name: string;
+  username: string;
+  password?: string;
+  logo?: string; // Base64 or URL
+}
+
+export interface Payment {
+  id: string;
+  schoolId: string;
+  amount: number;
+  method: string; // Default 'Cash USD'
+  date: string;
+  observations?: string;
+  status: 'pending' | 'verified' | 'rejected';
+}
+
+export type Role = 'teacher' | 'student' | 'admin' | 'school' | null;
 
 export type ViewState =
   | 'dashboard'

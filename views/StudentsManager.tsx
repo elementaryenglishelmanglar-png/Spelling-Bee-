@@ -16,9 +16,11 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
   const [school, setSchool] = useState('');
   const [grade, setGrade] = useState<GradeLevel>(1);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [editingStudent, setEditingStudent] = useState<StudentProfile | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<StudentProfile | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filter States
@@ -33,12 +35,16 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
       setSchool(editingStudent.school);
       setGrade(editingStudent.grade);
       setPhoto(editingStudent.photo ?? null);
+      setUsername(editingStudent.username ?? '');
+      setPassword(editingStudent.password ?? '');
     } else {
       setFirstName('');
       setLastName('');
       setSchool('');
       setGrade(1);
       setPhoto(null);
+      setUsername('');
+      setPassword('');
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [editingStudent]);
@@ -77,6 +83,8 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
         school: school.trim(),
         grade,
         photo: photo || undefined,
+        username: username.trim() || undefined,
+        password: password.trim() || undefined,
       };
       onUpdateStudent(updated);
       setEditingStudent(null);
@@ -87,12 +95,16 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
         lastName: lastName.trim(),
         school: school.trim(),
         grade,
-        photo: photo || undefined
+        photo: photo || undefined,
+        username: username.trim() || undefined,
+        password: password.trim() || undefined,
       };
       onAddStudent(newStudent);
       setFirstName('');
       setLastName('');
       setPhoto(null);
+      setUsername('');
+      setPassword('');
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -104,6 +116,8 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
     setSchool('');
     setGrade(1);
     setPhoto(null);
+    setUsername('');
+    setPassword('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -138,77 +152,102 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
               )}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
-              
+
               {/* Photo Upload Area */}
               <div className="flex justify-center mb-4">
                 <div className="relative group">
-                    <div 
-                        className="w-24 h-24 rounded-full bg-stone-100 border-2 border-dashed border-stone-300 flex items-center justify-center overflow-hidden cursor-pointer hover:border-yellow-400 transition-colors"
-                        onClick={() => fileInputRef.current?.click()}
-                    >
-                        {photo ? (
-                            <img src={photo} alt="Preview" className="w-full h-full object-cover" />
-                        ) : (
-                            <Camera className="text-stone-400 group-hover:text-yellow-500 transition-colors" size={32} />
-                        )}
-                    </div>
-                    {photo && (
-                        <button 
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); removePhoto(); }}
-                            className="absolute -top-1 -right-1 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600"
-                        >
-                            <X size={12} />
-                        </button>
+                  <div
+                    className="w-24 h-24 rounded-full bg-stone-100 border-2 border-dashed border-stone-300 flex items-center justify-center overflow-hidden cursor-pointer hover:border-yellow-400 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {photo ? (
+                      <img src={photo} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Camera className="text-stone-400 group-hover:text-yellow-500 transition-colors" size={32} />
                     )}
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={handleImageUpload} 
-                        accept="image/*" 
-                        className="hidden" 
-                    />
-                    <p className="text-xs text-center text-stone-400 mt-2">
-                        {photo ? 'Click to change' : 'Upload Photo (Optional)'}
-                    </p>
+                  </div>
+                  {photo && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removePhoto(); }}
+                      className="absolute -top-1 -right-1 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <p className="text-xs text-center text-stone-400 mt-2">
+                    {photo ? 'Click to change' : 'Upload Photo (Optional)'}
+                  </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                 <div>
-                    <label className="block text-xs font-bold text-stone-500 uppercase mb-1">First Name</label>
-                    <input
-                      type="text"
-                      value={firstName}
-                      onChange={e => setFirstName(e.target.value)}
-                      className="w-full p-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-yellow-200 outline-none"
-                      placeholder="e.g. John"
-                    />
-                 </div>
-                 <div>
-                    <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Last Name</label>
-                    <input
-                      type="text"
-                      value={lastName}
-                      onChange={e => setLastName(e.target.value)}
-                      className="w-full p-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-yellow-200 outline-none"
-                      placeholder="e.g. Doe"
-                    />
-                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">First Name</label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={e => setFirstName(e.target.value)}
+                    className="w-full p-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-yellow-200 outline-none"
+                    placeholder="e.g. John"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={e => setLastName(e.target.value)}
+                    className="w-full p-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-yellow-200 outline-none"
+                    placeholder="e.g. Doe"
+                  />
+                </div>
               </div>
-              
+
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase mb-1">School</label>
                 <div className="relative">
-                   <School className="absolute left-2.5 top-2.5 text-stone-400" size={16} />
-                   <input
-                     type="text"
-                     value={school}
-                     onChange={e => setSchool(e.target.value)}
-                     className="w-full pl-9 p-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-yellow-200 outline-none"
-                     placeholder="School Name"
-                   />
+                  <School className="absolute left-2.5 top-2.5 text-stone-400" size={16} />
+                  <input
+                    type="text"
+                    value={school}
+                    onChange={e => setSchool(e.target.value)}
+                    className="w-full pl-9 p-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-yellow-200 outline-none"
+                    placeholder="School Name"
+                  />
                 </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Username (Optional)</label>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                      className="w-full p-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-yellow-200 outline-none"
+                      placeholder="User123"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Password</label>
+                    <input
+                      type="text"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="w-full p-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-yellow-200 outline-none"
+                      placeholder="****"
+                    />
+                  </div>
+                </div>
+
+
               </div>
 
               <div>
@@ -248,82 +287,82 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
         {/* Student List */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-stone-200 shadow-sm gap-4">
-             <span className="font-bold text-stone-700">Total Registered: {filteredStudents.length}</span>
-             
-             <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold text-stone-400 uppercase">Filters:</span>
-                
-                {/* Grade Filter */}
-                <select 
-                    value={filterGrade}
-                    onChange={(e) => setFilterGrade(e.target.value === 'All' ? 'All' : Number(e.target.value) as GradeLevel)}
-                    className="p-2 text-sm border border-stone-300 rounded-lg outline-none bg-white focus:border-yellow-400"
-                >
-                    <option value="All">All Grades</option>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
-                        <option key={g} value={g}>Grade {g}</option>
-                    ))}
-                </select>
+            <span className="font-bold text-stone-700">Total Registered: {filteredStudents.length}</span>
 
-                {/* School Filter */}
-                <select 
-                    value={filterSchool}
-                    onChange={(e) => setFilterSchool(e.target.value)}
-                    className="p-2 text-sm border border-stone-300 rounded-lg outline-none bg-white focus:border-yellow-400 max-w-[150px]"
-                >
-                    <option value="All">All Schools</option>
-                    {uniqueSchools.map(s => (
-                        <option key={s} value={s}>{s}</option>
-                    ))}
-                </select>
-             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-stone-400 uppercase">Filters:</span>
+
+              {/* Grade Filter */}
+              <select
+                value={filterGrade}
+                onChange={(e) => setFilterGrade(e.target.value === 'All' ? 'All' : Number(e.target.value) as GradeLevel)}
+                className="p-2 text-sm border border-stone-300 rounded-lg outline-none bg-white focus:border-yellow-400"
+              >
+                <option value="All">All Grades</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
+                  <option key={g} value={g}>Grade {g}</option>
+                ))}
+              </select>
+
+              {/* School Filter */}
+              <select
+                value={filterSchool}
+                onChange={(e) => setFilterSchool(e.target.value)}
+                className="p-2 text-sm border border-stone-300 rounded-lg outline-none bg-white focus:border-yellow-400 max-w-[150px]"
+              >
+                <option value="All">All Schools</option>
+                {uniqueSchools.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredStudents.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-stone-400 border-2 border-dashed border-stone-200 rounded-xl">
-                    No students match the current filters.
-                </div>
+              <div className="col-span-full py-12 text-center text-stone-400 border-2 border-dashed border-stone-200 rounded-xl">
+                No students match the current filters.
+              </div>
             ) : (
-                filteredStudents.map(student => (
-                  <div key={student.id} className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm hover:border-yellow-300 transition-all group flex justify-between items-start">
-                    <div className="flex gap-3 items-center">
-                        <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-100 shrink-0 overflow-hidden">
-                            {student.photo ? (
-                                <img src={student.photo} alt={student.firstName} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-orange-600 font-bold">
-                                    {student.firstName[0]}{student.lastName[0]}
-                                </div>
-                            )}
+              filteredStudents.map(student => (
+                <div key={student.id} className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm hover:border-yellow-300 transition-all group flex justify-between items-start">
+                  <div className="flex gap-3 items-center">
+                    <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-100 shrink-0 overflow-hidden">
+                      {student.photo ? (
+                        <img src={student.photo} alt={student.firstName} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-orange-600 font-bold">
+                          {student.firstName[0]}{student.lastName[0]}
                         </div>
-                        <div>
-                            <h4 className="font-bold text-stone-800">{student.firstName} {student.lastName}</h4>
-                            <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">
-                                <span className="flex items-center gap-1"><School size={12}/> {student.school}</span>
-                                <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-                                <span className="font-bold text-stone-400">Grade {student.grade}</span>
-                            </div>
-                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => setEditingStudent(student)}
-                        className="p-2 text-stone-300 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button 
-                        onClick={() => setStudentToDelete(student)}
-                        className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 size={16} />
-                    </button>
+                    <div>
+                      <h4 className="font-bold text-stone-800">{student.firstName} {student.lastName}</h4>
+                      <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">
+                        <span className="flex items-center gap-1"><School size={12} /> {student.school}</span>
+                        <span className="w-1 h-1 rounded-full bg-stone-300"></span>
+                        <span className="font-bold text-stone-400">Grade {student.grade}</span>
+                      </div>
                     </div>
                   </div>
-                ))
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setEditingStudent(student)}
+                      className="p-2 text-stone-300 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                      title="Edit"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      onClick={() => setStudentToDelete(student)}
+                      className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
