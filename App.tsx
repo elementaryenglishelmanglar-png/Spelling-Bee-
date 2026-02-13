@@ -357,7 +357,7 @@ const AppContent: React.FC = () => {
               </button>
               <button onClick={() => setView('leaderboard')} className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${view === 'leaderboard' ? 'bg-yellow-100 text-yellow-700' : 'hover:bg-stone-100 text-stone-500'}`} title="Leaderboard">
                 <Trophy size={20} />
-                <span className="font-bold">Leaderboard</span>
+                <span className="font-bold hidden sm:inline">Leaderboard</span>
               </button>
             </div>
 

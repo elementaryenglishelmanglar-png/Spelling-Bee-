@@ -116,12 +116,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
     ];
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-fade-in p-4 mb-20">
+        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-fade-in p-3 sm:p-4 mb-20">
 
             {/* Header */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-200 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-full bg-stone-100 border-2 border-stone-200 overflow-hidden shadow-inner">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-stone-200 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-stone-100 border-2 border-stone-200 overflow-hidden shadow-inner shrink-0">
                         {student.photo ? (
                             <img src={student.photo} alt={student.firstName} className="w-full h-full object-cover" />
                         ) : (
@@ -130,46 +130,46 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                             </div>
                         )}
                     </div>
-                    <div className="text-center md:text-left">
-                        <h1 className="text-2xl font-bold text-stone-800">Hello, <span className="text-yellow-500">{student.firstName}</span>!</h1>
-                        <p className="text-stone-500">Ready to spell today?</p>
-                        <div className={`flex items-center gap-2 mt-1 font-bold ${rankColor}`}>
+                    <div className="text-left">
+                        <h1 className="text-xl sm:text-2xl font-bold text-stone-800">Hello, <span className="text-yellow-500">{student.firstName}</span>!</h1>
+                        <p className="text-sm sm:text-base text-stone-500">Ready to spell today?</p>
+                        <div className={`flex items-center gap-2 mt-1 font-bold text-sm ${rankColor}`}>
                             <RankIcon size={16} /> {rankTitle}
                         </div>
                     </div>
                 </div>
 
-                <div className="flex gap-3">
-                    <div className="bg-yellow-100 px-4 py-2 rounded-xl border border-yellow-200">
-                        <span className="text-xs font-bold text-yellow-700 uppercase mr-2">Your Balance</span>
-                        <span className="font-black text-yellow-800 text-lg">{student.coins ?? 0} BeeCoins</span>
+                <div className="flex flex-wrap justify-center sm:justify-end gap-3 w-full md:w-auto">
+                    <div className="bg-yellow-100 px-3 py-2 sm:px-4 sm:py-2 rounded-xl border border-yellow-200 flex items-center">
+                        <span className="text-[10px] sm:text-xs font-bold text-yellow-700 uppercase mr-2">Balance</span>
+                        <span className="font-black text-yellow-800 text-base sm:text-lg whitespace-nowrap">{student.coins ?? 0} BeeCoins</span>
                     </div>
 
                     <button
                         onClick={() => onStartPractice('generator')}
-                        className="px-6 py-3 bg-yellow-400 hover:bg-yellow-300 text-stone-900 rounded-xl font-bold transition-all shadow-md active:scale-95"
+                        className="px-4 py-2 sm:px-6 sm:py-3 bg-yellow-400 hover:bg-yellow-300 text-stone-900 rounded-xl font-bold transition-all shadow-md active:scale-95 text-sm sm:text-base flex-1 sm:flex-none"
                     >
                         Practice
                     </button>
                     <button
                         onClick={() => onStartPractice('drill')}
-                        className="px-6 py-3 bg-stone-800 hover:bg-stone-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-95"
+                        className="px-4 py-2 sm:px-6 sm:py-3 bg-stone-800 hover:bg-stone-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-95 text-sm sm:text-base flex-1 sm:flex-none"
                     >
                         Exercises
                     </button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
 
                 {/* Progress Card */}
-                <div className="md:col-span-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-lg relative overflow-visible">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><Trophy size={120} /></div>
+                <div className="md:col-span-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-4 sm:p-6 text-white shadow-lg relative overflow-visible">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><Trophy size={100} className="sm:w-[120px] sm:h-[120px]" /></div>
                     <div className="relative z-10">
-                        <h3 className="text-lg font-bold opacity-90 mb-1">Your Progress</h3>
+                        <h3 className="text-base sm:text-lg font-bold opacity-90 mb-1">Your Progress</h3>
                         <div className="flex items-end gap-2 mb-4">
-                            <span className="text-4xl font-black">{currentXP.toLocaleString()}</span>
-                            <span className="text-sm font-bold opacity-70 mb-2">XP earned</span>
+                            <span className="text-3xl sm:text-4xl font-black">{currentXP.toLocaleString()}</span>
+                            <span className="text-xs sm:text-sm font-bold opacity-70 mb-2">XP earned</span>
                         </div>
 
                         <div className="mb-2 flex justify-between text-xs font-bold opacity-80">
@@ -185,7 +185,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                             {/* Milestones / Chests */}
                             {[25, 50, 75, 100].map(pct => (
                                 <div key={pct} className="absolute top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center transform hover:scale-125 transition-transform cursor-pointer" style={{ left: `${pct}%`, marginLeft: '-12px' }}>
-                                    <div className={`w-4 h-4 rounded-sm rotate-45 ${progressPercent >= pct ? 'bg-yellow-300 shadow-glow' : 'bg-stone-600 border border-stone-500'}`}></div>
+                                    <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-sm rotate-45 ${progressPercent >= pct ? 'bg-yellow-300 shadow-glow' : 'bg-stone-600 border border-stone-500'}`}></div>
                                 </div>
                             ))}
                         </div>
@@ -193,31 +193,31 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                 </div>
 
                 {/* Streak & Rank */}
-                <div className="space-y-6">
-                    <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-3xl p-6 text-white shadow-lg flex items-center justify-between relative overflow-hidden group">
-                        <div className="absolute -left-4 -bottom-4 opacity-20"><Flame size={100} /></div>
+                <div className="space-y-4 sm:space-y-6">
+                    <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-3xl p-4 sm:p-6 text-white shadow-lg flex items-center justify-between relative overflow-hidden group">
+                        <div className="absolute -left-4 -bottom-4 opacity-20"><Flame size={80} className="sm:w-[100px] sm:h-[100px]" /></div>
                         <div className="relative z-10">
-                            <h3 className="text-lg font-bold opacity-90">Daily Streak</h3>
-                            <div className="text-4xl font-black">{student.current_streak || 0} <span className="text-lg">Days</span></div>
+                            <h3 className="text-base sm:text-lg font-bold opacity-90">Daily Streak</h3>
+                            <div className="text-3xl sm:text-4xl font-black">{student.current_streak || 0} <span className="text-base sm:text-lg">Days</span></div>
                         </div>
-                        <Flame size={40} className="text-yellow-300 animate-pulse drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+                        <Flame size={32} className="sm:w-10 sm:h-10 text-yellow-300 animate-pulse drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
                     </div>
 
-                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-200 flex items-center justify-between">
+                    <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-stone-200 flex items-center justify-between">
                         <div>
-                            <h3 className="text-sm font-bold text-stone-400 uppercase">Class Rank</h3>
-                            <div className="text-3xl font-black text-stone-800">#{rank || '-'}</div>
+                            <h3 className="text-xs sm:text-sm font-bold text-stone-400 uppercase">Class Rank</h3>
+                            <div className="text-2xl sm:text-3xl font-black text-stone-800">#{rank || '-'}</div>
                         </div>
-                        <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
-                            <Medal size={24} />
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
+                            <Medal size={20} className="sm:w-6 sm:h-6" />
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {/* Shop Section */}
-                <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-200">
+                <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-stone-200">
                     <h3 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2">
                         <ShoppingBag className="text-yellow-500" /> Student Shop
                     </h3>
