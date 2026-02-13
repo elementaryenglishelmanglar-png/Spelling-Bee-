@@ -31,6 +31,7 @@ export interface StudentProfile {
   total_xp?: number;
   current_streak?: number;
   last_practice_date?: string;
+  coins?: number;
 }
 
 export interface Achievement {
@@ -38,6 +39,22 @@ export interface Achievement {
   studentId: string;
   badgeKey: string;
   unlockedAt: string;
+}
+
+export interface InventoryItem {
+  id: string; // unique db id
+  studentId: string;
+  itemId: string; // e.g. 'streak_freeze'
+  quantity: number;
+  purchasedAt: string;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  icon: any; // Lucide icon
 }
 
 export interface StudentStat {

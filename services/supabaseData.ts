@@ -557,3 +557,175 @@ export async function fetchStudentAchievements(studentId: string): Promise<any[]
     return [];
   }
 }
+
+// --- Gamification & Shop
+export async function fetchStudentInventory(studentId: string): Promise<any[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const { data, error } = await supabase
+      .from('student_items')
+      .select('*')
+      .eq('student_id', studentId);
+
+    if (error) {
+      console.warn("Could not fetch inventory:", error);
+      return [];
+    }
+
+    return data.map((item: any) => ({
+      id: item.id,
+      studentId: item.student_id,
+      itemId: item.item_id,
+      quantity: item.quantity,
+      purchasedAt: item.purchased_at
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function purchaseItem(studentId: string, itemId: string, cost: number): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+
+  // 1. Check/Deduct coins
+  const { data: student, error: fetchError } = await supabase
+    .from('students')
+    .select('coins')
+    .eq('id', studentId)
+    .single();
+
+  if (fetchError || !student || (student.coins || 0) < cost) {
+    return false; // Not enough coins or error
+  }
+
+  const newBalance = (student.coins || 0) - cost;
+
+  // 2. Transaction (Deduct coins + Add Item)
+  // Note: simpler to do sequentially without Rpc for now, though not atomic.
+
+  // Update coins
+  const { error: updateError } = await supabase
+    .from('students')
+    .update({ coins: newBalance })
+    .eq('id', studentId);
+
+  if (updateError) return false;
+
+  // Add item
+  // Check if exists first to increment quantity
+  const { data: existing } = await supabase
+    .from('student_items')
+    .select('*')
+    .eq('student_id', studentId)
+    .eq('item_id', itemId)
+    .single();
+
+  if (existing) {
+    await supabase
+      .from('student_items')
+      .update({ quantity: existing.quantity + 1 })
+      .eq('id', existing.id);
+  } else {
+    await supabase
+      .from('student_items')
+      .insert({
+        student_id: studentId,
+        item_id: itemId,
+        quantity: 1
+      });
+  }
+
+  return true;
+}
+
+export async function addCoins(studentId: string, amount: number): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  // RPC is better for atomic increment, but let's stick to select+update for consistency if RPC not set up
+  // Actually, let's try a simple RPC call if it existed, otherwise fallback.
+  // We'll stick to select-update for safety in this "no-rpc" assumption env.
+
+  const { data: student } = await supabase.from('students').select('coins').eq('id', studentId).single();
+  if (student) {
+    const current = student.coins || 0;
+    await supabase.from('students').update({ coins: current + amount }).eq('id', studentId);
+  }
+}
+
+export async function checkAndUpdateStreak(studentId: string): Promise<{ streak: number, message?: string }> {
+  if (!isSupabaseConfigured()) return { streak: 0 };
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data: student, error } = await supabase
+    .from('students')
+    .select('current_streak, last_practice_date')
+    .eq('id', studentId)
+    .single();
+
+  if (error || !student) return { streak: 0 };
+
+  const lastDate = student.last_practice_date;
+
+  // Already practiced today
+  if (lastDate === today) {
+    return { streak: student.current_streak || 0 };
+  }
+
+  // Check if yesterday
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+  if (lastDate === yesterdayStr) {
+    // Increment streak
+    const newStreak = (student.current_streak || 0) + 1;
+    await supabase
+      .from('students')
+      .update({ current_streak: newStreak, last_practice_date: today })
+      .eq('id', studentId);
+    return { streak: newStreak, message: "Streak Increased!" };
+  } else {
+    // Missed a day (or more)
+    // Check for Streak Freeze
+    const { data: freezeItem } = await supabase
+      .from('student_items')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('item_id', 'streak_freeze')
+      .gt('quantity', 0)
+      .single();
+
+    if (freezeItem) {
+      // Use Streak Freeze
+      await supabase
+        .from('student_items')
+        .update({ quantity: freezeItem.quantity - 1 })
+        .eq('id', freezeItem.id);
+
+      // Keep streak (don't increment, but don't reset? Or increment? Usually you carry over)
+      // Let's say we Keep it and just update the date to today so they don't lose it.
+      // Actually, if they practice *today*, they should keep the streak AND increment it, effectively bridging the gap.
+      // But if the gap is huge (e.g. 5 days ago), one freeze might not be enough?
+      // Simplified: If last practice was NOT yesterday, but we have a freeze, we consume it to "pretend" we practiced yesterday.
+      // So we effectively Increment the old streak.
+
+      const savedStreak = (student.current_streak || 0) + 1;
+      await supabase
+        .from('students')
+        .update({ current_streak: savedStreak, last_practice_date: today })
+        .eq('id', studentId);
+
+      return { streak: savedStreak, message: "Streak Frozen Used! Streak Saved!" };
+    } else {
+      // Reset Streak
+      // If it's the very first time (lastDate is null), streak becomes 1.
+      const newStreak = 1;
+      await supabase
+        .from('students')
+        .update({ current_streak: newStreak, last_practice_date: today })
+        .eq('id', studentId);
+      return { streak: newStreak, message: lastDate ? "Streak Reset!" : "First Day!" };
+    }
+  }
+}
