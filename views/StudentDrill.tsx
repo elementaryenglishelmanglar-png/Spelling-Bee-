@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { WordEntry, GradeLevel, StudentProfile } from '../types';
 import { Volume2, CheckCircle, XCircle, ChevronRight, Trophy, Shuffle, Heart, HeartCrack } from 'lucide-react';
-import { recordStudentStat, addCoins, checkAndUpdateStreak } from '../services/supabaseData';
+import { recordStudentStat, addCoins, checkAndUpdateStreak, fetchStudentWordStats } from '../services/supabaseData';
 import confetti from 'canvas-confetti';
 
 type PracticeMode = 'spelling' | 'anagram';
@@ -31,6 +31,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
   const [selectedLetters, setSelectedLetters] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
   const [score, setScore] = useState(0);
+  const [wordHistory, setWordHistory] = useState<any[]>([]);
 
   // Gamification States
   const [lives, setLives] = useState(3);
@@ -40,8 +41,9 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (activeStudent) {
+    if (activeStudent) { // Added null check for activeStudent
       setSelectedGrade(activeStudent.grade);
+      fetchStudentWordStats(activeStudent.id).then(setWordHistory);
     }
   }, [activeStudent]);
 
@@ -58,8 +60,48 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
 
   const nextWord = () => {
     if (gradeWords.length === 0) return;
-    const random = gradeWords[Math.floor(Math.random() * gradeWords.length)];
-    setCurrentWord(random);
+
+    // SRS Weighted Selection
+    let selectedWord: WordEntry;
+
+    if (wordHistory.length === 0) {
+      // Fallback to random if no history
+      selectedWord = gradeWords[Math.floor(Math.random() * gradeWords.length)];
+    } else {
+      // Calculate weights
+      const weights = gradeWords.map(word => {
+        const stats = wordHistory.filter(h => h.word_id === word.id);
+        if (stats.length === 0) return 20; // New word bonus
+
+        const lastAttempt = stats[0]; // Ordered by desc time
+        if (!lastAttempt.is_correct) return 50; // High priority for recent errors
+
+        // Check consecutive correct
+        let consecutive = 0;
+        for (const s of stats) {
+          if (s.is_correct) consecutive++;
+          else break;
+        }
+        if (consecutive > 2) return 1; // Mastered
+
+        return 5; // Standard review
+      });
+
+      // Weighted Random Selection
+      const totalWeight = weights.reduce((a, b) => a + b, 0);
+      let random = Math.random() * totalWeight;
+      let index = 0;
+      for (let i = 0; i < weights.length; i++) {
+        random -= weights[i];
+        if (random < 0) {
+          index = i;
+          break;
+        }
+      }
+      selectedWord = gradeWords[index];
+    }
+
+    setCurrentWord(selectedWord);
     setUserInput('');
     setSelectedLetters([]);
     setFeedback('none');
@@ -67,12 +109,12 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
 
     // Si es modo anagrama, mezclar las letras
     if (practiceMode === 'anagram') {
-      const shuffled = shuffleLetters(random.word);
+      const shuffled = shuffleLetters(selectedWord.word);
       setShuffledLetters(shuffled);
     }
 
     // Auto pronounce after a short delay
-    setTimeout(() => speak(random.audioUrl), 500);
+    setTimeout(() => speak(selectedWord.audioUrl), 500);
 
     // Focus input si es modo spelling
     if (practiceMode === 'spelling') {
@@ -199,6 +241,8 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
         timeTaken,
         pointsEarned: points
       });
+      // Refresh history for next selection
+      fetchStudentWordStats(activeStudent.id).then(setWordHistory);
     }
   };
 
@@ -338,7 +382,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                 <span className="text-xl font-bold text-stone-800">{score}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-stone-500 font-medium">Coins Earned</span>
+                <span className="text-stone-500 font-medium">BeeCoins Earned</span>
                 <span className="text-xl font-bold text-yellow-500">+{Math.floor(score / 15)}</span>
               </div>
             </div>

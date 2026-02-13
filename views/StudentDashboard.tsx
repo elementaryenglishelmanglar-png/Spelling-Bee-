@@ -138,9 +138,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                 </div>
 
                 <div className="flex gap-3">
-                    <div className="px-4 py-2 bg-yellow-50 rounded-xl border border-yellow-200 flex items-center gap-2 mr-2">
-                        <Coins className="text-yellow-600" size={20} />
-                        <span className="font-bold text-yellow-800 text-lg">{student.coins || 0}</span>
+                    <div className="bg-yellow-100 px-4 py-2 rounded-xl border border-yellow-200">
+                        <span className="text-xs font-bold text-yellow-700 uppercase mr-2">Your Balance</span>
+                        <span className="font-black text-yellow-800 text-lg">{student.coins ?? 0} BeeCoins</span>
                     </div>
 
                     <button
@@ -231,13 +231,22 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                                         <ItemIcon size={24} className="text-stone-700" />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-stone-800 leading-tight">{item.name}</h4>
-                                        <p className="text-xs text-stone-500 leading-tight mt-1">{item.description}</p>
+                                        <h4 className="font-bold text-stone-800">{item.name}</h4>
+                                        <p className="text-xs text-stone-500 mb-2">{item.description}</p>
+                                        <div className="inline-flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded text-xs font-bold text-yellow-700 border border-yellow-100">
+                                            <span>💰</span> {item.cost} BeeCoins
+                                        </div>
                                     </div>
                                     <div className="text-right">
                                         {userHas ? (
                                             <div className="flex flex-col items-end">
                                                 <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded mb-1">Owned: {userHas.quantity}</span>
+                                                <div className="text-right">
+                                                    <p className="text-2xl font-black text-yellow-600 leading-none">
+                                                        {student.coins?.toLocaleString() ?? 0}
+                                                    </p>
+                                                    <p className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">BeeCoins</p>
+                                                </div>
                                                 <button
                                                     onClick={() => handlePurchase(item)}
                                                     disabled={!canAfford || purchasing === item.id}
@@ -251,8 +260,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                                                 onClick={() => handlePurchase(item)}
                                                 disabled={!canAfford || purchasing === item.id}
                                                 className={`px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 ${canAfford
-                                                        ? 'bg-yellow-400 text-stone-900 hover:bg-yellow-300 shadow-sm'
-                                                        : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                                                    ? 'bg-yellow-400 text-stone-900 hover:bg-yellow-300 shadow-sm'
+                                                    : 'bg-stone-200 text-stone-400 cursor-not-allowed'
                                                     }`}
                                             >
                                                 {purchasing === item.id ? '...' : (

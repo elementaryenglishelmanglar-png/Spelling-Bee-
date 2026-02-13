@@ -729,3 +729,22 @@ export async function checkAndUpdateStreak(studentId: string): Promise<{ streak:
     }
   }
 }
+
+export async function fetchStudentWordStats(studentId: string): Promise<any[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  // Fetch last 500 attempts to build a good history profile
+  const { data, error } = await supabase
+    .from('student_stats')
+    .select('*')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (error) {
+    console.warn("Could not fetch student stats for SRS:", error);
+    return [];
+  }
+
+  return data ?? [];
+}
