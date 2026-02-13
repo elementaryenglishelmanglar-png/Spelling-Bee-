@@ -10,9 +10,10 @@ interface StudentGeneratorProps {
   beeImageUrl?: string;
   activeStudent: StudentProfile | null;
   onLogin: (student: StudentProfile) => void;
+  onRefreshStudent?: () => void;
 }
 
-export const StudentGenerator: React.FC<StudentGeneratorProps> = ({ words, beeImageUrl, activeStudent, onLogin }) => {
+export const StudentGenerator: React.FC<StudentGeneratorProps> = ({ words, beeImageUrl, activeStudent, onLogin, onRefreshStudent }) => {
   const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(activeStudent?.grade || 1);
   const [currentWord, setCurrentWord] = useState<WordEntry | null>(null);
   const [isRevealed, setIsRevealed] = useState(false);
@@ -135,6 +136,7 @@ export const StudentGenerator: React.FC<StudentGeneratorProps> = ({ words, beeIm
       <StudentDashboard
         student={activeStudent}
         onStartPractice={(newMode) => setMode(newMode)}
+        onRefreshStudent={onRefreshStudent}
       />
     );
   }

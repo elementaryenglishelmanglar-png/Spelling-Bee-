@@ -6,6 +6,7 @@ import { fetchStudentAchievements, fetchLeaderboard, purchaseItem, fetchStudentI
 interface StudentDashboardProps {
     student: StudentProfile;
     onStartPractice: (mode: 'generator' | 'drill') => void;
+    onRefreshStudent?: () => void;
 }
 
 const SHOP_ITEMS: ShopItem[] = [
@@ -25,7 +26,7 @@ const SHOP_ITEMS: ShopItem[] = [
     }
 ];
 
-export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onStartPractice }) => {
+export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onStartPractice, onRefreshStudent }) => {
     const [achievements, setAchievements] = useState<Achievement[]>([]);
     const [rank, setRank] = useState<number | null>(null);
     const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -36,6 +37,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
 
     useEffect(() => {
         loadDashboardData();
+        if (onRefreshStudent) onRefreshStudent();
     }, [student.id]);
 
     const loadDashboardData = async () => {

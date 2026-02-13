@@ -33,6 +33,7 @@ import {
   addSession as addSessionToSupabase,
   deleteSession,
 } from './services/supabaseData';
+import { supabase } from './lib/supabase';
 
 const WORDS_STORAGE_KEY = 'spellbound_words_v1';
 const SESSIONS_STORAGE_KEY = 'spellbound_sessions_v1';
@@ -283,6 +284,26 @@ const AppContent: React.FC = () => {
     </button>
   );
 
+  const refreshActiveStudent = async () => {
+    if (!activeStudent || !isSupabaseConfigured()) return;
+    const { data, error } = await supabase.from('students').select('*').eq('id', activeStudent.id).single();
+    if (data) {
+      setActiveStudent({
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        school: data.school,
+        schoolId: data.school_id ?? undefined,
+        grade: data.grade,
+        photo: data.photo_url ?? undefined,
+        username: data.username,
+        password: data.password,
+        total_xp: data.total_xp ?? 0,
+        coins: data.coins,
+      });
+    }
+  };
+
   // 1. Welcome Screen
   if (!role) {
     return <WelcomeScreen onSelectRole={handleRoleSelect} beeImageUrl={BEE_IMAGE_URL} />;
@@ -466,6 +487,8 @@ const AppContent: React.FC = () => {
           </>
         )}
 
+
+
         {/* --- STUDENT VIEWS --- */}
         {role === 'student' && (
           <>
@@ -475,6 +498,7 @@ const AppContent: React.FC = () => {
                 beeImageUrl={BEE_IMAGE_URL}
                 activeStudent={activeStudent}
                 onLogin={setActiveStudent}
+                onRefreshStudent={refreshActiveStudent}
               />
             )}
             {view === 'student-drill' && (
