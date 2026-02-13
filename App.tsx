@@ -376,6 +376,7 @@ const AppContent: React.FC = () => {
               {role === 'student' && (
                 <>
                   <NavButton target="student-generator" icon={Sparkles} label="Student Zone" />
+                  <NavButton target="leaderboard" icon={Trophy} label="Leaderboard" />
                 </>
               )}
 
@@ -507,6 +508,7 @@ const AppContent: React.FC = () => {
                 activeStudent={activeStudent}
               />
             )}
+            {view === 'leaderboard' && <Leaderboard />}
           </>
         )}
 

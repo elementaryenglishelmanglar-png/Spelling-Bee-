@@ -125,11 +125,4 @@ export interface Payment {
 
 export type Role = 'teacher' | 'student' | 'admin' | 'school' | null;
 
-export type ViewState =
-  | 'dashboard'
-  | 'manage'
-  | 'students'
-  | 'session'
-  | 'history'
-  | 'student-generator'
-  | 'student-drill';
+export type ViewState = 'dashboard' | 'session' | 'history' | 'manage' | 'students' | 'student-generator' | 'student-drill' | 'leaderboard';
