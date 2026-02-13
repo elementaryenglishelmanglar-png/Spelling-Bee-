@@ -27,17 +27,6 @@ View your app in AI Studio: https://ai.studio/apps/drive/15zM6j_UxyTc0MXQWF-LDfX
    - (Opcional) `VITE_TEACHER_CREDENTIALS`: usuarios para Teacher/Coordinador en formato `usuario1:clave1,usuario2:clave2`. Si no la defines, se usan los usuarios por defecto.
 3. Deploy: Vercel usará `vercel.json` (build `npm run build`, salida `dist`).
 
-## Login Teacher / Coordinador
-
-El acceso a la sección **Teacher & Coordinator** requiere usuario y contraseña.
-
-**Usuarios precreados por defecto:**
-
-| Usuario     | Contraseña  |
-|------------|-------------|
-| teacher    | bee2025     |
-| coordinator| coord2025   |
-
 Puedes cambiar las credenciales editando `lib/auth.ts` o definiendo la variable de entorno `VITE_TEACHER_CREDENTIALS` en Vercel (formato: `user1:pass1,user2:pass2`). La sesión se guarda en `sessionStorage` y se mantiene hasta cerrar la pestaña o hacer logout.
 
 ## Backend con Supabase (datos en el host)
