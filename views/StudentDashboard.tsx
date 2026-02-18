@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { StudentProfile, Achievement, ShopItem, InventoryItem } from '../types';
-import { Trophy, Flame, Star, Medal, Crown, Target, Zap, BookOpen, Award, ShoppingBag, Lock, Unlock, Coins } from 'lucide-react';
-import { fetchStudentAchievements, fetchLeaderboard, purchaseItem, fetchStudentInventory, isSupabaseConfigured } from '../services/supabaseData';
+import { StudentProfile, Achievement, ShopItem, InventoryItem, Vendor, Sponsor } from '../types';
+import { Trophy, Flame, Star, Medal, Crown, Target, Zap, BookOpen, Award, ShoppingBag, Lock, Unlock, Coins, MapPin } from 'lucide-react';
+import { fetchStudentAchievements, fetchLeaderboard, purchaseItem, fetchStudentInventory, isSupabaseConfigured, fetchVendors, fetchSponsors } from '../services/supabaseData';
 
 interface StudentDashboardProps {
     student: StudentProfile;
@@ -31,6 +31,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
     const [rank, setRank] = useState<number | null>(null);
     const [inventory, setInventory] = useState<InventoryItem[]>([]);
     const [purchasing, setPurchasing] = useState<string | null>(null);
+    const [vendors, setVendors] = useState<Vendor[]>([]);
+    const [sponsors, setSponsors] = useState<Sponsor[]>([]);
 
     // Force re-render on coin update if necessary, though simpler to rely on parent passing fresh student
     // For now we assume student prop is fresh or we don't handle real-time coin updates without refresh.
@@ -54,6 +56,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
             // Load Inventory
             const inv = await fetchStudentInventory(student.id);
             setInventory(inv);
+
+            // Load Vendors and Sponsors
+            const v = await fetchVendors();
+            setVendors(v);
+            const s = await fetchSponsors();
+            setSponsors(s);
         } catch (error) {
             console.error("Error loading dashboard data", error);
         }
@@ -308,6 +316,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                     </div>
                 </div>
             </div>
+
+
 
         </div>
     );

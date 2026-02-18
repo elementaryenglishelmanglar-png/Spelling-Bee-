@@ -148,12 +148,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSelectRole, beeI
 
   // Main Role Selection Screen
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-100 via-orange-50 to-white flex items-center justify-center p-4 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-100 via-orange-50 to-white flex flex-col items-center justify-between p-4 font-sans relative overflow-x-hidden">
       {/* Decorative blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-yellow-200/50 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-orange-200/50 rounded-full blur-3xl"></div>
+      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-yellow-200/50 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-orange-200/50 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div className="max-w-6xl w-full relative z-10">
+      <div className="max-w-6xl w-full relative z-10 flex-1 flex flex-col justify-center">
         <div className="text-center mb-12 flex flex-col items-center">
           {beeImageUrl ? (
             <div className="mb-6 relative">
@@ -179,7 +179,11 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSelectRole, beeI
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="text-center text-stone-400 mb-8 mt-4 text-sm font-medium tracking-wide uppercase animate-fade-in">
+          Select a profile to continue
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
           {/* Admin Card */}
           <button
             onClick={() => setLoginMode('admin')}
@@ -237,9 +241,61 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSelectRole, beeI
             </div>
           </button>
         </div>
+      </div>
 
-        <p className="text-center text-stone-400 mt-12 text-sm font-medium tracking-wide uppercase">
-          Select a profile to continue
+      {/* Sponsors Footer */}
+      <WelcomeSponsors />
+    </div>
+  );
+};
+
+// Internal component for Sponsors display
+import { Sponsor } from '../types';
+import { fetchSponsors } from '../services/supabaseData';
+import { useEffect as useEffectReact } from 'react';
+
+const WelcomeSponsors: React.FC = () => {
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+
+  useEffectReact(() => {
+    fetchSponsors().then(setSponsors).catch(console.error);
+  }, []);
+
+  if (sponsors.length === 0) return null;
+
+  return (
+    <div className="w-full animate-fade-in z-20 mt-8 md:absolute md:bottom-4 md:left-0">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="flex items-center justify-center gap-3 mb-3 opacity-60">
+          <span className="h-px bg-stone-400 w-12"></span>
+          <h3 className="text-[10px] sm:text-xs font-black text-stone-500 uppercase tracking-widest">Proudly Supported By</h3>
+          <span className="h-px bg-stone-400 w-12"></span>
+        </div>
+
+        <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10 pb-4">
+          {sponsors.map(s => (
+            <a
+              key={s.id}
+              href={s.websiteUrl || '#'}
+              target={s.websiteUrl ? "_blank" : "_self"}
+              rel="noreferrer"
+              className="group transition-transform hover:scale-110 duration-300 opacity-70 hover:opacity-100 grayscale hover:grayscale-0"
+              title={s.name}
+            >
+              <img
+                src={s.logoUrl}
+                alt={s.name}
+                className={`object-contain transition-all duration-300 drop-shadow-sm ${s.tier === 'Gold' ? 'h-10 md:h-14' :
+                  s.tier === 'Silver' ? 'h-8 md:h-10' :
+                    'h-6 md:h-8'
+                  }`}
+              />
+            </a>
+          ))}
+        </div>
+
+        <p className="text-center text-[10px] text-stone-300 uppercase tracking-widest font-medium">
+          © {new Date().getFullYear()} Official Spelling Bee Platform
         </p>
       </div>
     </div>

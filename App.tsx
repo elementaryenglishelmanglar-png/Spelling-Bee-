@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GradeLevel, ViewState, WordEntry, Session, Role, StudentProfile } from './types';
+import { GradeLevel, ViewState, WordEntry, Session, Role, StudentProfile, Sponsor } from './types';
 import { Dashboard } from './views/Dashboard';
 import { PracticeMode } from './views/PracticeMode'; // Teacher Session Mode
 import { HistoryView } from './views/HistoryView';
@@ -12,6 +12,8 @@ import { StudentsManager } from './views/StudentsManager';
 import { InvitedSchoolDashboard } from './views/InvitedSchoolDashboard';
 import { InterschoolManager } from './views/InterschoolManager';
 import { Leaderboard } from './views/Leaderboard';
+import { SponsorsManager } from './views/SponsorsManager';
+import { VendorsManager } from './views/VendorsManager';
 
 import { LayoutDashboard, List, Play, Book, History, LogOut, Sparkles, GraduationCap, Users, School as SchoolIcon, Globe, Trophy } from 'lucide-react';
 import { hasTeacherSession, clearTeacherSession, hasSchoolSession, getSchoolSession, clearSchoolSession, SchoolSessionData } from './lib/auth';
@@ -32,6 +34,7 @@ import {
   deleteStudent as deleteStudentFromSupabase,
   addSession as addSessionToSupabase,
   deleteSession,
+  fetchSponsors,
 } from './services/supabaseData';
 import { supabase } from './lib/supabase';
 
@@ -58,11 +61,25 @@ const AppContent: React.FC = () => {
   const [words, setWords] = useState<WordEntry[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [students, setStudents] = useState<StudentProfile[]>([]);
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [manageGrade, setManageGrade] = useState<GradeLevel>(1);
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   const [savingSession, setSavingSession] = useState(false);
   const [activeStudent, setActiveStudent] = useState<StudentProfile | null>(null);
+
+  useEffect(() => {
+    // Load sponsors for global footer usage
+    const loadSponsors = async () => {
+      try {
+        const data = await fetchSponsors();
+        setSponsors(data);
+      } catch (e) {
+        console.error("Failed to load sponsors for footer", e);
+      }
+    };
+    loadSponsors();
+  }, [view]);
 
   // Cargar datos: Supabase o localStorage
   useEffect(() => {
@@ -411,10 +428,15 @@ const AppContent: React.FC = () => {
               />
             )}
 
-            {/* @ts-ignore - view type expansion hack if needed, or better added to ViewState */}
+            {/* @ts-ignore */}
             {view === 'interschool' && (
               <InterschoolManager />
             )}
+
+            {/* @ts-ignore */}
+            {view === 'manage-sponsors' && <SponsorsManager />}
+            {/* @ts-ignore */}
+            {view === 'manage-vendors' && <VendorsManager />}
 
             {view === 'manage' && (
               <div className="animate-fade-in space-y-6">
@@ -514,9 +536,40 @@ const AppContent: React.FC = () => {
 
       </main>
 
-      <footer className="bg-white border-t border-stone-200 py-6 mt-12">
-        <div className="max-w-7xl mx-auto px-4 text-center text-stone-400 text-sm">
-          <p>© {new Date().getFullYear()} Colegio Integral El Manglar , Brindando oportunidades de vida a nuestros estudiantes</p>
+      <footer className="bg-white border-t border-stone-200 py-8 mt-12">
+        <div className="max-w-7xl mx-auto px-4">
+
+          {/* Sponsors Section */}
+          {sponsors.length > 0 && (
+            <div className="mb-8 border-b border-stone-100 pb-8">
+              <h3 className="text-center text-sm font-bold text-stone-400 uppercase tracking-widest mb-6">Event Sponsors</h3>
+              <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-80 grayscale hover:grayscale-0 transition-all duration-500">
+                {sponsors.map(s => (
+                  <a
+                    key={s.id}
+                    href={s.websiteUrl || '#'}
+                    target={s.websiteUrl ? "_blank" : "_self"}
+                    rel="noreferrer"
+                    className="transition-transform hover:scale-110"
+                    title={s.name}
+                  >
+                    <img
+                      src={s.logoUrl}
+                      alt={s.name}
+                      className={`object-contain ${s.tier === 'Gold' ? 'h-16 md:h-20' :
+                          s.tier === 'Silver' ? 'h-12 md:h-16' :
+                            'h-8 md:h-12'
+                        }`}
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="text-center text-stone-400 text-sm">
+            <p>© {new Date().getFullYear()} Colegio Integral El Manglar , Brindando oportunidades de vida a nuestros estudiantes</p>
+          </div>
         </div>
       </footer>
       <ToastContainer toasts={toasts} onClose={removeToast} />

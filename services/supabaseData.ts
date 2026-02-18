@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import type { WordEntry, StudentProfile, Session, GradeLevel, School, Payment, SchoolResource } from '../types';
+import type { WordEntry, StudentProfile, Session, GradeLevel, School, Payment, SchoolResource, Sponsor, Vendor } from '../types';
 
 const BUCKET_WORD_IMAGES = 'word-images';
 const BUCKET_STUDENT_PHOTOS = 'student-photos';
@@ -795,7 +795,6 @@ export async function checkAndUpdateStreak(studentId: string): Promise<{ streak:
         .from('students')
         .update({ current_streak: savedStreak, last_practice_date: today })
         .eq('id', studentId);
-
       return { streak: savedStreak, message: "Streak Frozen Used! Streak Saved!" };
     } else {
       // Reset Streak
@@ -805,9 +804,140 @@ export async function checkAndUpdateStreak(studentId: string): Promise<{ streak:
         .from('students')
         .update({ current_streak: newStreak, last_practice_date: today })
         .eq('id', studentId);
-      return { streak: newStreak, message: lastDate ? "Streak Reset!" : "First Day!" };
+
+      return { streak: newStreak, message: "Streak Reset (Missed a day)" };
     }
   }
+}
+
+// --- Sponsors
+export async function fetchSponsors(): Promise<Sponsor[]> {
+  if (!isSupabaseConfigured()) {
+    const local = localStorage.getItem('spellbound_sponsors');
+    return local ? JSON.parse(local) : [];
+  }
+  const { data, error } = await supabase.from('sponsors').select('*').order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    logoUrl: row.logo_url,
+    websiteUrl: row.website_url,
+    tier: row.tier
+  }));
+}
+
+export async function addSponsor(sponsor: Sponsor): Promise<Sponsor> {
+  if (!isSupabaseConfigured()) {
+    const current = await fetchSponsors();
+    const updated = [...current, sponsor];
+    localStorage.setItem('spellbound_sponsors', JSON.stringify(updated));
+    return sponsor;
+  }
+
+  let logoUrl = sponsor.logoUrl;
+  if (isDataUrl(logoUrl)) {
+    // Assume bucket exists or repurpose existing bucket for now if strict
+    // ideally create 'sponsors' bucket. using 'school-resources' or 'word-images' as fallback?
+    // Let's use 'school-resources' for now to avoid creating new bucket logic if not needed, or 'word-images'
+    // actually let's stick to base64 if bucket not guaranteed or just upload to 'word-images' generic
+    logoUrl = await uploadDataUrlToStorage(BUCKET_WORD_IMAGES, `sponsor-${sponsor.id}.png`, logoUrl);
+  }
+
+  const { data, error } = await supabase
+    .from('sponsors')
+    .insert({
+      id: sponsor.id,
+      name: sponsor.name,
+      logo_url: logoUrl,
+      website_url: sponsor.websiteUrl,
+      tier: sponsor.tier
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return {
+    id: data.id,
+    name: data.name,
+    logoUrl: data.logo_url,
+    websiteUrl: data.website_url,
+    tier: data.tier
+  };
+}
+
+export async function deleteSponsor(id: string): Promise<void> {
+  if (!isSupabaseConfigured()) {
+    const current = await fetchSponsors();
+    const updated = current.filter(s => s.id !== id);
+    localStorage.setItem('spellbound_sponsors', JSON.stringify(updated));
+    return;
+  }
+  const { error } = await supabase.from('sponsors').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// --- Vendors
+export async function fetchVendors(): Promise<Vendor[]> {
+  if (!isSupabaseConfigured()) {
+    const local = localStorage.getItem('spellbound_vendors');
+    return local ? JSON.parse(local) : [];
+  }
+  const { data, error } = await supabase.from('vendors').select('*').order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    logoUrl: row.logo_url,
+    location: row.location
+  }));
+}
+
+export async function addVendor(vendor: Vendor): Promise<Vendor> {
+  if (!isSupabaseConfigured()) {
+    const current = await fetchVendors();
+    const updated = [...current, vendor];
+    localStorage.setItem('spellbound_vendors', JSON.stringify(updated));
+    return vendor;
+  }
+
+  let logoUrl = vendor.logoUrl;
+  if (isDataUrl(logoUrl)) {
+    logoUrl = await uploadDataUrlToStorage(BUCKET_WORD_IMAGES, `vendor-${vendor.id}.png`, logoUrl);
+  }
+
+  const { data, error } = await supabase
+    .from('vendors')
+    .insert({
+      id: vendor.id,
+      name: vendor.name,
+      description: vendor.description,
+      logo_url: logoUrl,
+      location: vendor.location
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return {
+    id: data.id,
+    name: data.name,
+    description: data.description,
+    logoUrl: data.logo_url,
+    location: data.location
+  };
+}
+
+export async function deleteVendor(id: string): Promise<void> {
+  if (!isSupabaseConfigured()) {
+    const current = await fetchVendors();
+    const updated = current.filter(v => v.id !== id);
+    localStorage.setItem('spellbound_vendors', JSON.stringify(updated));
+    return;
+  }
+  const { error } = await supabase.from('vendors').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function fetchStudentWordStats(studentId: string): Promise<any[]> {

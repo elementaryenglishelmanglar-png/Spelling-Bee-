@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { School, StudentProfile, GradeLevel, Payment, SchoolResource } from '../types';
-import { fetchStudents, addStudent, deleteStudent, fetchPayments, addPayment, fetchSchoolResources } from '../services/supabaseData';
+import { School, StudentProfile, GradeLevel, Payment, SchoolResource, Vendor, Sponsor } from '../types';
+import { fetchStudents, addStudent, deleteStudent, fetchPayments, addPayment, fetchSchoolResources, fetchVendors, fetchSponsors } from '../services/supabaseData';
 import { useToast } from '../lib/toastContext';
-import { LogOut, Users, FileText, Upload, XCircle, CheckCircle, DollarSign, Calendar, MessageSquare, Clock, Download } from 'lucide-react';
+import { LogOut, Users, FileText, Upload, XCircle, CheckCircle, DollarSign, Calendar, MessageSquare, Clock, Download, Store, MapPin } from 'lucide-react';
 import { LoadingOverlay } from '../components/LoadingSpinner';
 
 interface InvitedSchoolDashboardProps {
@@ -10,9 +10,94 @@ interface InvitedSchoolDashboardProps {
     onLogout: () => void;
 }
 
+const VendorList: React.FC = () => {
+    const [vendors, setVendors] = useState<Vendor[]>([]);
+
+    useEffect(() => {
+        fetchVendors().then(setVendors).catch(console.error);
+    }, []);
+
+    if (vendors.length === 0) return <div className="text-stone-400 italic">No vendors announced yet.</div>;
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {vendors.map(v => (
+                <div key={v.id} className="bg-stone-50 rounded-xl overflow-hidden border border-stone-100 hover:shadow-md transition-shadow">
+                    <div className="h-40 bg-white relative">
+                        <img src={v.logoUrl} alt={v.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="p-4">
+                        <h3 className="font-bold text-stone-800 text-lg">{v.name}</h3>
+                        <p className="text-stone-600 text-sm mt-1 mb-3">{v.description}</p>
+                        {v.location && (
+                            <div className="flex items-center gap-1 text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded w-fit">
+                                <MapPin size={12} /> {v.location}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const SponsorGrid: React.FC = () => {
+    const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+
+    useEffect(() => {
+        fetchSponsors().then(setSponsors).catch(console.error);
+    }, []);
+
+    if (sponsors.length === 0) return null;
+
+    return (
+        <div className="w-full bg-white rounded-2xl shadow-sm border border-stone-100 p-6 mb-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                <img src="/bee.png" alt="Bee" className="w-32 h-32 object-contain grayscale" />
+            </div>
+
+            <div className="flex items-center gap-4 mb-6 relative z-10">
+                <div className="h-px bg-stone-200 flex-1"></div>
+                <h3 className="text-center font-black text-stone-400 uppercase tracking-widest text-xs flex items-center gap-2">
+                    <img src="/bee.png" alt="Bee" className="w-4 h-4 object-contain grayscale opacity-50" />
+                    Proudly Supported By
+                </h3>
+                <div className="h-px bg-stone-200 flex-1"></div>
+            </div>
+
+            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 relative z-10">
+                {sponsors.map(s => (
+                    <a
+                        key={s.id}
+                        href={s.websiteUrl || '#'}
+                        target={s.websiteUrl ? "_blank" : "_self"}
+                        rel="noreferrer"
+                        className="group relative transition-transform hover:scale-110 grayscale hover:grayscale-0 opacity-70 hover:opacity-100 duration-300"
+                        title={s.name}
+                    >
+                        <img
+                            src={s.logoUrl}
+                            alt={s.name}
+                            className={`object-contain transition-all duration-300 ${s.tier === 'Gold' ? 'h-16 md:h-20' :
+                                s.tier === 'Silver' ? 'h-12 md:h-16' :
+                                    'h-8 md:h-12'
+                                }`}
+                        />
+                        {s.tier === 'Gold' && (
+                            <div className="absolute -top-3 -right-3 bg-yellow-400 text-yellow-900 text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm scale-0 group-hover:scale-100 transition-transform">
+                                PARTNER
+                            </div>
+                        )}
+                    </a>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ school, onLogout }) => {
     const { showToast } = useToast();
-    const [activeTab, setActiveTab] = useState<'delegation' | 'registration' | 'docs' | 'payments'>('delegation');
+    const [activeTab, setActiveTab] = useState<'delegation' | 'registration' | 'docs' | 'payments' | 'market'>('delegation');
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
     const [resources, setResources] = useState<SchoolResource[]>([]);
@@ -205,6 +290,11 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+                {/* Enhanced Sponsor Display (Always Visible) */}
+                <div className="mb-10 animate-fade-in">
+                    <SponsorGrid />
+                </div>
+
                 {/* Tabs */}
                 <div className="flex overflow-x-auto space-x-1 mb-8 border-b border-stone-200 pb-1">
                     {[
@@ -212,6 +302,7 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                         { id: 'registration', label: 'Register Student', icon: CheckCircle },
                         { id: 'payments', label: 'Payments', icon: DollarSign },
                         { id: 'docs', label: 'Documentation', icon: FileText },
+                        { id: 'market', label: 'Event Market', icon: Store },
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -280,6 +371,8 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                                 ))}
                             </div>
                         )}
+
+
                     </div>
                 )}
 
@@ -449,22 +542,22 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                                     No payments registered yet.
                                 </div>
                             ) : (
-                                <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-                                    <table className="w-full">
+                                <div className="bg-white rounded-xl border border-stone-200 overflow-hidden overflow-x-auto">
+                                    <table className="w-full min-w-[500px]">
                                         <thead className="bg-stone-50 border-b border-stone-200">
                                             <tr>
-                                                <th className="text-left py-3 px-4 font-bold text-stone-600 text-sm">Date</th>
-                                                <th className="text-left py-3 px-4 font-bold text-stone-600 text-sm">Amount</th>
-                                                <th className="text-left py-3 px-4 font-bold text-stone-600 text-sm">Status</th>
-                                                <th className="text-left py-3 px-4 font-bold text-stone-600 text-sm">Observations</th>
+                                                <th className="text-left py-3 px-4 font-bold text-stone-600 text-sm whitespace-nowrap">Date</th>
+                                                <th className="text-left py-3 px-4 font-bold text-stone-600 text-sm whitespace-nowrap">Amount</th>
+                                                <th className="text-left py-3 px-4 font-bold text-stone-600 text-sm whitespace-nowrap">Status</th>
+                                                <th className="text-left py-3 px-4 font-bold text-stone-600 text-sm min-w-[200px]">Observations</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {payments.map(p => (
                                                 <tr key={p.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
-                                                    <td className="py-3 px-4 text-stone-800 text-sm">{new Date(p.date).toLocaleDateString()}</td>
-                                                    <td className="py-3 px-4 font-bold text-green-700 text-sm">${p.amount}</td>
-                                                    <td className="py-3 px-4">
+                                                    <td className="py-3 px-4 text-stone-800 text-sm whitespace-nowrap">{new Date(p.date).toLocaleDateString()}</td>
+                                                    <td className="py-3 px-4 font-bold text-green-700 text-sm whitespace-nowrap">${p.amount}</td>
+                                                    <td className="py-3 px-4 whitespace-nowrap">
                                                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${p.status === 'verified' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                                                             }`}>
                                                             {p.status === 'pending' && <Clock size={12} />}
@@ -552,8 +645,19 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                         </div>
                     </div>
                 )}
+                {activeTab === 'market' && (
+                    <div className="space-y-8 animate-fade-in">
+                        <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                            <h2 className="text-xl font-bold text-stone-800 mb-2">Event Vendors</h2>
+                            <p className="text-stone-500 mb-6">Discover the shops and stands available during the Spelling Bee event.</p>
 
+                            <VendorList />
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
+
+

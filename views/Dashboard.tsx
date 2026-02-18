@@ -1,12 +1,12 @@
 import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LineChart, Line } from 'recharts';
-import { WordEntry, GradeLevel, Session } from '../types';
-import { BookOpen, Trophy, Users, TrendingUp } from 'lucide-react';
+import { WordEntry, GradeLevel, Session, ViewState } from '../types';
+import { BookOpen, Trophy, Users, TrendingUp, Database, Play, Award, Store } from 'lucide-react';
 
 interface DashboardProps {
   words: WordEntry[];
   sessions: Session[];
-  onChangeView: (view: 'manage' | 'session') => void;
+  onChangeView: (view: ViewState) => void;
   beeImageUrl?: string;
 }
 
@@ -405,20 +405,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
       )}
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
         <button
           onClick={() => onChangeView('manage')}
-          className="p-6 bg-stone-800 rounded-xl text-yellow-400 font-bold text-lg hover:shadow-lg transition-all hover:scale-[1.01] flex flex-col items-center justify-center border border-stone-900"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 font-bold"
         >
-          <span>Manage Word Lists</span>
-          <span className="text-sm font-normal text-stone-400 mt-1">Add or edit definitions</span>
+          <Database size={20} />
+          Manage Word Lists
         </button>
         <button
           onClick={() => onChangeView('session')}
-          className="p-6 bg-yellow-400 border border-yellow-500 rounded-xl text-stone-900 font-bold text-lg hover:bg-yellow-300 hover:shadow-lg transition-all hover:scale-[1.01] flex flex-col items-center justify-center"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-stone-900 rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 font-bold"
         >
-          <span>Start Practice Mode</span>
-          <span className="text-sm font-normal text-stone-700 mt-1">Run a session</span>
+          <Play size={20} />
+          Start Live Session
+        </button>
+        <button
+          onClick={() => onChangeView('manage-sponsors')}
+          className="flex items-center gap-2 px-6 py-3 bg-white border border-stone-200 text-stone-700 rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 font-bold"
+        >
+          <Award size={20} className="text-yellow-500" />
+          Sponsors
+        </button>
+        <button
+          onClick={() => onChangeView('manage-vendors')}
+          className="flex items-center gap-2 px-6 py-3 bg-white border border-stone-200 text-stone-700 rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 font-bold"
+        >
+          <Store size={20} className="text-purple-500" />
+          Vendors
         </button>
       </div>
     </div>

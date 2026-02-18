@@ -368,7 +368,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
         state={gameOver ? 'sad' : feedback === 'correct' ? 'happy' : feedback === 'incorrect' ? 'sad' : 'neutral'}
       />
 
-      <div className={`bg-white p-8 rounded-3xl shadow-xl border border-stone-100 text-center relative overflow-hidden transition-all duration-300 ${feedback === 'incorrect' ? 'animate-shake border-red-200' : ''}`}>
+      <div className={`bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-stone-100 text-center relative overflow-hidden transition-all duration-300 ${feedback === 'incorrect' ? 'animate-shake border-red-200' : ''}`}>
 
         {/* Game Over Overlay */}
         {gameOver && (

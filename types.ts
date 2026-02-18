@@ -134,4 +134,20 @@ export interface SchoolResource {
   createdAt: string;
 }
 
-export type ViewState = 'dashboard' | 'session' | 'history' | 'manage' | 'students' | 'student-generator' | 'student-drill' | 'leaderboard';
+export type ViewState = 'dashboard' | 'session' | 'history' | 'manage' | 'students' | 'student-generator' | 'student-drill' | 'leaderboard' | 'manage-sponsors' | 'manage-vendors';
+
+export interface Sponsor {
+  id: string;
+  name: string;
+  logoUrl: string;
+  websiteUrl?: string;
+  tier?: 'Gold' | 'Silver' | 'Bronze';
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  description: string;
+  logoUrl: string; // Or a product image
+  location?: string; // Stand number or map location
+}
