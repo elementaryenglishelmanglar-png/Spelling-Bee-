@@ -377,8 +377,8 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
                 onChange={(e) => setSelectedGrade(Number(e.target.value) as GradeLevel)}
                 className="w-full p-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-yellow-200 outline-none"
               >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
-                  <option key={g} value={g}>Grade {g} ({words.filter(w => w.grade === g).length} words)</option>
+                {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
+                  <option key={g} value={g}>{g === 12 ? 'Group 3' : `Grade ${g}`} ({words.filter(w => w.grade === g).length} words)</option>
                 ))}
               </select>
             </div>
@@ -576,9 +576,9 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
                         onChange={(e) => setGeneratorGrade(Number(e.target.value) as GradeLevel)}
                         className="w-full p-2 border border-stone-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-200 outline-none"
                       >
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
+                        {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
                           <option key={g} value={g}>
-                            Grade {g} list ({words.filter(w => w.grade === g).length} words)
+                            {g === 12 ? 'Group 3' : `Grade ${g}`} ({words.filter(w => w.grade === g).length} words)
                           </option>
                         ))}
                       </select>

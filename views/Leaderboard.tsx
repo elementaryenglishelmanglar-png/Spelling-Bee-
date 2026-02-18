@@ -110,8 +110,8 @@ export const Leaderboard: React.FC = () => {
                             className="bg-transparent font-bold text-stone-800 outline-none cursor-pointer"
                         >
                             <option value="All">All Grades</option>
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
-                                <option key={g} value={g}>Grade {g}</option>
+                            {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
+                                <option key={g} value={g}>{g === 12 ? 'Group 3' : `Grade ${g}`}</option>
                             ))}
                         </select>
                     </div>
@@ -163,11 +163,11 @@ export const Leaderboard: React.FC = () => {
                         <div
                             key={student.id}
                             className={`flex items-center gap-4 p-4 rounded-xl border-l-4 transition-all hover:scale-[1.01] bg-white border-stone-100 relative overflow-hidden ${student.league === 'Diamond' ? 'border-l-cyan-400' :
-                                    student.league === 'Platinum' ? 'border-l-slate-300' :
-                                        student.league === 'Gold' ? 'border-l-yellow-400' :
-                                            student.league === 'Bronze' ? 'border-l-orange-400' :
-                                                student.league === 'Iron' ? 'border-l-stone-400' :
-                                                    'border-l-stone-200'
+                                student.league === 'Platinum' ? 'border-l-slate-300' :
+                                    student.league === 'Gold' ? 'border-l-yellow-400' :
+                                        student.league === 'Bronze' ? 'border-l-orange-400' :
+                                            student.league === 'Iron' ? 'border-l-stone-400' :
+                                                'border-l-stone-200'
                                 }`}
                         >
                             {/* Rank Badge */}

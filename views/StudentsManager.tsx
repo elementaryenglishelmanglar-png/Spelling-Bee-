@@ -257,8 +257,8 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
                   onChange={e => setGrade(Number(e.target.value) as GradeLevel)}
                   className="w-full p-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-yellow-200 outline-none"
                 >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
-                    <option key={g} value={g}>Grade {g}</option>
+                  {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
+                    <option key={g} value={g}>{g === 12 ? 'Group 3' : `Grade ${g}`}</option>
                   ))}
                 </select>
               </div>
@@ -299,8 +299,8 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
                 className="p-2 text-sm border border-stone-300 rounded-lg outline-none bg-white focus:border-yellow-400"
               >
                 <option value="All">All Grades</option>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
-                  <option key={g} value={g}>Grade {g}</option>
+                {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => (
+                  <option key={g} value={g}>{g === 12 ? 'Group 3' : `Grade ${g}`}</option>
                 ))}
               </select>
 

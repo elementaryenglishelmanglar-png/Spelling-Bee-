@@ -446,7 +446,7 @@ const AppContent: React.FC = () => {
                     <p className="text-stone-500">Add, remove, and review words for each grade level.</p>
                   </div>
                   <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-stone-200 shadow-sm overflow-x-auto">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((g) => (
+                    {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((g) => (
                       <button
                         key={g}
                         onClick={() => setManageGrade(g as GradeLevel)}
@@ -455,7 +455,7 @@ const AppContent: React.FC = () => {
                           : 'text-stone-500 hover:bg-orange-50 hover:text-stone-800'
                           }`}
                       >
-                        Grade {g}
+                        {g === 12 ? 'Group 3' : `Grade ${g}`}
                       </button>
                     ))}
                   </div>
@@ -557,8 +557,8 @@ const AppContent: React.FC = () => {
                       src={s.logoUrl}
                       alt={s.name}
                       className={`object-contain ${s.tier === 'Gold' ? 'h-16 md:h-20' :
-                          s.tier === 'Silver' ? 'h-12 md:h-16' :
-                            'h-8 md:h-12'
+                        s.tier === 'Silver' ? 'h-12 md:h-16' :
+                          'h-8 md:h-12'
                         }`}
                     />
                   </a>
