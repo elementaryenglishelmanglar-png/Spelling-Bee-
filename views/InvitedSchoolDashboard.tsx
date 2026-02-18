@@ -546,8 +546,8 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                                 If you have any questions about the registration process or the event details, please contact the event coordinator.
                             </p>
                             <div className="font-medium text-blue-800">
-                                coord@spellingbee.com <br />
-                                +1 (555) 123-4567
+                                elementaryenglish.elmanglar@gmail.com <br />
+                                +58 412-185-7248
                             </div>
                         </div>
                     </div>
