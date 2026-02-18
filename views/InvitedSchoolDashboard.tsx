@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { School, StudentProfile, GradeLevel, Payment } from '../types';
-import { fetchStudents, addStudent, deleteStudent, fetchPayments, addPayment } from '../services/supabaseData';
+import { School, StudentProfile, GradeLevel, Payment, SchoolResource } from '../types';
+import { fetchStudents, addStudent, deleteStudent, fetchPayments, addPayment, fetchSchoolResources } from '../services/supabaseData';
 import { useToast } from '../lib/toastContext';
-import { LogOut, Users, FileText, Upload, XCircle, CheckCircle, DollarSign, Calendar, MessageSquare, Clock } from 'lucide-react';
+import { LogOut, Users, FileText, Upload, XCircle, CheckCircle, DollarSign, Calendar, MessageSquare, Clock, Download } from 'lucide-react';
 import { LoadingOverlay } from '../components/LoadingSpinner';
 
 interface InvitedSchoolDashboardProps {
@@ -15,6 +15,7 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
     const [activeTab, setActiveTab] = useState<'delegation' | 'registration' | 'docs' | 'payments'>('delegation');
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
+    const [resources, setResources] = useState<SchoolResource[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
@@ -36,15 +37,17 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
     const loadSchoolData = async () => {
         setLoading(true);
         try {
-            const [allStudents, allPayments] = await Promise.all([
+            const [allStudents, allPayments, allResources] = await Promise.all([
                 fetchStudents(),
-                fetchPayments(school.id)
+                fetchPayments(school.id),
+                fetchSchoolResources()
             ]);
 
             // Filter students for this school (client-side for now)
             const schoolStudents = allStudents.filter(s => s.schoolId === school.id || s.school === school.name);
             setStudents(schoolStudents);
             setPayments(allPayments);
+            setResources(allResources);
         } catch (e) {
             console.error(e);
             showToast('Error loading data', 'error');
@@ -151,6 +154,14 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
             setSubmitting(false);
         }
     };
+
+    // Helper to group resources
+    const groupedResources = resources.reduce((acc, resource) => {
+        const grade = resource.grade;
+        if (!acc[grade]) acc[grade] = [];
+        acc[grade].push(resource);
+        return acc;
+    }, {} as Record<number, SchoolResource[]>);
 
     if (loading) return <div className="p-8 text-center">Loading school data...</div>;
 
@@ -475,19 +486,59 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                 {activeTab === 'docs' && (
                     <div className="space-y-6 animate-fade-in">
                         <h2 className="text-xl font-bold text-stone-800">Documentation & Resources</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {['Contest Rules 2026', 'Event Schedule', 'Media Kit', 'Practice Guide'].map((doc, i) => (
-                                <div key={i} className="bg-white p-4 rounded-xl border border-stone-200 flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
-                                            <FileText size={24} />
+
+                        {resources.length === 0 ? (
+                            <div className="bg-white p-8 rounded-xl border border-stone-200 text-center">
+                                <FileText size={48} className="mx-auto text-stone-300 mb-4" />
+                                <p className="text-stone-500 font-medium">No documents available yet.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-6">
+                                {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(grade => {
+                                    const gradeResources = groupedResources[grade];
+                                    if (!gradeResources || gradeResources.length === 0) return null;
+
+                                    return (
+                                        <div key={grade} className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+                                            <div className="bg-stone-50 px-6 py-3 border-b border-stone-200 flex items-center gap-2">
+                                                <span className="w-8 h-8 rounded-lg bg-stone-800 text-yellow-400 flex items-center justify-center font-bold text-sm">
+                                                    {grade === 12 ? 'G3' : `G${grade}`}
+                                                </span>
+                                                <h3 className="font-bold text-stone-700">
+                                                    {grade === 12 ? 'Group 3 Resources' : `Grade ${grade} Resources`}
+                                                </h3>
+                                            </div>
+                                            <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {gradeResources.map(res => (
+                                                    <div key={res.id} className="border border-stone-100 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all group">
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="p-2.5 bg-red-50 text-red-500 rounded-lg group-hover:bg-red-100 transition-colors">
+                                                                    <FileText size={20} />
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-bold text-stone-800 leading-tight group-hover:text-blue-700 transition-colors">{res.title}</h4>
+                                                                    <p className="text-xs text-stone-400 mt-1">{new Date(res.createdAt).toLocaleDateString()}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <a
+                                                            href={res.fileUrl}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="mt-4 flex items-center justify-center gap-2 w-full py-2 bg-stone-50 text-stone-600 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white transition-colors"
+                                                        >
+                                                            <Download size={16} />
+                                                            Download PDF
+                                                        </a>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <span className="font-bold text-stone-800">{doc}</span>
-                                    </div>
-                                    <button className="text-blue-600 text-sm font-bold hover:underline">Download PDF</button>
-                                </div>
-                            ))}
-                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
 
                         <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mt-8">
                             <h3 className="text-lg font-bold text-blue-900 mb-2">Need Help?</h3>

@@ -1,8 +1,9 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import type { WordEntry, StudentProfile, Session, GradeLevel, School, Payment } from '../types';
+import type { WordEntry, StudentProfile, Session, GradeLevel, School, Payment, SchoolResource } from '../types';
 
 const BUCKET_WORD_IMAGES = 'word-images';
 const BUCKET_STUDENT_PHOTOS = 'student-photos';
+const BUCKET_SCHOOL_RESOURCES = 'school-resources';
 
 // --- Helpers: data URL → Blob → upload → public URL
 async function uploadDataUrlToStorage(
@@ -360,6 +361,85 @@ export async function validateSchoolLogin(username: string, password: string): P
     username: data.username,
     logo: data.logo
   };
+}
+
+// --- School Resources (PDFs)
+export async function fetchSchoolResources(grade?: number): Promise<SchoolResource[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  let query = supabase.from('school_resources').select('*').order('created_at', { ascending: false });
+  if (grade) {
+    query = query.eq('grade', grade);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    fileUrl: row.file_url,
+    grade: row.grade as GradeLevel,
+    createdAt: row.created_at
+  }));
+}
+
+export async function addSchoolResource(resource: SchoolResource, file: File): Promise<SchoolResource> {
+  if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+
+  // Upload file
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${resource.id}.${fileExt}`;
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from(BUCKET_SCHOOL_RESOURCES)
+    .upload(fileName, file);
+
+  if (uploadError) throw uploadError;
+
+  const { data: urlData } = supabase.storage
+    .from(BUCKET_SCHOOL_RESOURCES)
+    .getPublicUrl(fileName);
+
+  const publicUrl = urlData.publicUrl;
+
+  // Insert Record
+  const { data, error } = await supabase
+    .from('school_resources')
+    .insert({
+      id: resource.id,
+      title: resource.title,
+      description: resource.description,
+      file_url: publicUrl,
+      grade: resource.grade
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    title: data.title,
+    description: data.description,
+    fileUrl: data.file_url,
+    grade: data.grade,
+    createdAt: data.created_at
+  };
+}
+
+export async function deleteSchoolResource(id: string, fileUrl: string): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+
+  // Extract filename from URL to delete from storage
+  // URL format: .../school-resources/uuid.pdf
+  const fileName = fileUrl.split('/').pop();
+  if (fileName) {
+    await supabase.storage.from(BUCKET_SCHOOL_RESOURCES).remove([fileName]);
+  }
+
+  const { error } = await supabase.from('school_resources').delete().eq('id', id);
+  if (error) throw error;
 }
 
 // --- Payments

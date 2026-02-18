@@ -125,4 +125,13 @@ export interface Payment {
 
 export type Role = 'teacher' | 'student' | 'admin' | 'school' | null;
 
+export interface SchoolResource {
+  id: string;
+  title: string;
+  description?: string;
+  fileUrl: string;
+  grade: GradeLevel;
+  createdAt: string;
+}
+
 export type ViewState = 'dashboard' | 'session' | 'history' | 'manage' | 'students' | 'student-generator' | 'student-drill' | 'leaderboard';

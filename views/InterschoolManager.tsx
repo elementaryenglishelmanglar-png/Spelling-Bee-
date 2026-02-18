@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { School, StudentProfile, Payment } from '../types';
-import { fetchSchools, addSchool, updateSchool, deleteSchool, fetchStudents, fetchPayments, updatePayment } from '../services/supabaseData';
+import { School, StudentProfile, Payment, SchoolResource, GradeLevel } from '../types';
+import { fetchSchools, addSchool, updateSchool, deleteSchool, fetchStudents, fetchPayments, updatePayment, fetchSchoolResources, addSchoolResource, deleteSchoolResource } from '../services/supabaseData';
 import { useToast } from '../lib/toastContext';
 import { LoadingOverlay } from '../components/LoadingSpinner';
-import { Plus, School as SchoolIcon, Users, ChevronRight, UserCheck, Trash2, Edit2, DollarSign, Upload, Image as ImageIcon, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plus, School as SchoolIcon, Users, ChevronRight, UserCheck, Trash2, Edit2, DollarSign, Upload, Image as ImageIcon, CheckCircle, XCircle, Clock, FileText } from 'lucide-react';
 
 export const InterschoolManager: React.FC = () => {
     const { showToast } = useToast();
@@ -11,7 +11,7 @@ export const InterschoolManager: React.FC = () => {
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeView, setActiveView] = useState<'list' | 'edition4' | 'payments'>('list');
+    const [activeView, setActiveView] = useState<'list' | 'edition4' | 'payments' | 'resources'>('list');
 
     // Create/Edit School Form
     const [showSchoolForm, setShowSchoolForm] = useState(false);
@@ -22,8 +22,11 @@ export const InterschoolManager: React.FC = () => {
     const [schoolLogo, setSchoolLogo] = useState<string | null>(null);
     const [processing, setProcessing] = useState(false);
 
-    // Payments View
-    const [selectedSchoolForPayments, setSelectedSchoolForPayments] = useState<string | null>(null);
+    // Resources View
+    const [resources, setResources] = useState<SchoolResource[]>([]);
+    const [resourceTitle, setResourceTitle] = useState('');
+    const [resourceGrade, setResourceGrade] = useState<GradeLevel>(1);
+    const [resourceFile, setResourceFile] = useState<File | null>(null);
 
     useEffect(() => {
         loadData();
@@ -32,10 +35,16 @@ export const InterschoolManager: React.FC = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [s, st, p] = await Promise.all([fetchSchools(), fetchStudents(), fetchPayments()]);
+            const [s, st, p, r] = await Promise.all([
+                fetchSchools(),
+                fetchStudents(),
+                fetchPayments(),
+                fetchSchoolResources()
+            ]);
             setSchools(s);
             setStudents(st);
             setPayments(p);
+            setResources(r);
         } catch (e) {
             console.error(e);
             showToast('Error loading interschool data', 'error');
@@ -43,6 +52,59 @@ export const InterschoolManager: React.FC = () => {
             setLoading(false);
         }
     };
+
+    const handleResourceUpload = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!resourceTitle || !resourceFile) {
+            showToast('Title and PDF file are required', 'error');
+            return;
+        }
+
+        setProcessing(true);
+        try {
+            const newRes = {
+                id: crypto.randomUUID(),
+                title: resourceTitle,
+                grade: resourceGrade,
+                fileUrl: '', // Will be set by service
+                createdAt: new Date().toISOString()
+            };
+
+            const added = await addSchoolResource(newRes, resourceFile);
+            setResources(prev => [added, ...prev]);
+            showToast('Resource uploaded successfully', 'success');
+
+            // Reset
+            setResourceTitle('');
+            setResourceFile(null);
+            setResourceGrade(1);
+            // Reset file input
+            const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
+
+        } catch (e) {
+            console.error(e);
+            showToast('Error uploading resource', 'error');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleDeleteResource = async (id: string, url: string) => {
+        if (!confirm('Are you sure you want to delete this resource?')) return;
+        setProcessing(true);
+        try {
+            await deleteSchoolResource(id, url);
+            setResources(prev => prev.filter(r => r.id !== id));
+            showToast('Resource deleted', 'success');
+        } catch (e) {
+            showToast('Error deleting resource', 'error');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    // ... (rest of the file existing functions)
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -144,7 +206,7 @@ export const InterschoolManager: React.FC = () => {
                     <h2 className="text-2xl font-bold text-stone-800">Interschool Management</h2>
                     <p className="text-stone-500">Manage invited schools, payments, and Edition IV delegations.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 box-border flex-wrap">
                     <button
                         onClick={() => setActiveView('list')}
                         className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeView === 'list' ? 'bg-stone-800 text-yellow-400' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200'}`}
@@ -163,8 +225,112 @@ export const InterschoolManager: React.FC = () => {
                     >
                         Edition IV
                     </button>
+                    <button
+                        onClick={() => setActiveView('resources')}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeView === 'resources' ? 'bg-stone-800 text-yellow-400' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200'}`}
+                    >
+                        PDF Resources
+                    </button>
                 </div>
             </header>
+
+            {activeView === 'resources' && (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                        <h3 className="text-lg font-bold text-stone-800 mb-4 flex items-center gap-2">
+                            <Upload size={20} className="text-blue-600" />
+                            Upload New Resource (PDF)
+                        </h3>
+                        <form onSubmit={handleResourceUpload} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div className="md:col-span-1">
+                                <label className="block text-sm font-bold text-stone-700 mb-1">Target Grade</label>
+                                <select
+                                    value={resourceGrade}
+                                    onChange={e => setResourceGrade(Number(e.target.value) as GradeLevel)}
+                                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                >
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => <option key={g} value={g}>Grade {g}</option>)}
+                                    <option value="12">Group 3</option>
+                                </select>
+                            </div>
+                            <div className="md:col-span-1">
+                                <label className="block text-sm font-bold text-stone-700 mb-1">Title / Description</label>
+                                <input
+                                    type="text"
+                                    value={resourceTitle}
+                                    onChange={e => setResourceTitle(e.target.value)}
+                                    placeholder="e.g. Spelling List G1"
+                                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    required
+                                />
+                            </div>
+                            <div className="md:col-span-1">
+                                <label className="block text-sm font-bold text-stone-700 mb-1">PDF File</label>
+                                <input
+                                    id="file-upload"
+                                    type="file"
+                                    accept="application/pdf"
+                                    onChange={e => setResourceFile(e.target.files?.[0] || null)}
+                                    className="w-full text-sm text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                    required
+                                />
+                            </div>
+                            <div className="md:col-span-1">
+                                <button type="submit" disabled={processing} className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                                    Upload PDF
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+                        <div className="bg-stone-50 px-6 py-4 border-b border-stone-200 font-bold text-stone-700">
+                            Available Resources
+                        </div>
+                        {resources.length === 0 ? (
+                            <div className="p-8 text-center text-stone-400 italic">No resources uploaded yet.</div>
+                        ) : (
+                            <table className="w-full">
+                                <thead className="bg-stone-50 border-b border-stone-200">
+                                    <tr>
+                                        <th className="text-left py-3 px-4 font-bold text-stone-600 text-sm">Grade</th>
+                                        <th className="text-left py-3 px-4 font-bold text-stone-600 text-sm">Title</th>
+                                        <th className="text-left py-3 px-4 font-bold text-stone-600 text-sm">Date</th>
+                                        <th className="text-right py-3 px-4 font-bold text-stone-600 text-sm">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {resources.map(r => (
+                                        <tr key={r.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
+                                            <td className="py-3 px-4">
+                                                <span className="inline-block px-2 py-1 bg-stone-100 text-stone-600 rounded text-xs font-bold">
+                                                    {r.grade === 12 ? 'Group 3' : `Grade ${r.grade}`}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-4 font-bold text-stone-800">
+                                                <a href={r.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-blue-600 hover:underline">
+                                                    <FileText size={16} className="text-red-500" />
+                                                    {r.title}
+                                                </a>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm text-stone-500">{new Date(r.createdAt).toLocaleDateString()}</td>
+                                            <td className="py-3 px-4 text-right">
+                                                <button
+                                                    onClick={() => handleDeleteResource(r.id, r.fileUrl)}
+                                                    className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {activeView === 'list' && (
                 <div className="space-y-6">
