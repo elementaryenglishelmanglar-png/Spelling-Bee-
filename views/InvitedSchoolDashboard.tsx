@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { School, StudentProfile, GradeLevel, Payment, SchoolResource, Vendor, Sponsor } from '../types';
 import { fetchStudents, addStudent, deleteStudent, fetchPayments, addPayment, fetchSchoolResources, fetchVendors, fetchSponsors } from '../services/supabaseData';
 import { useToast } from '../lib/toastContext';
-import { LogOut, Users, FileText, Upload, XCircle, CheckCircle, DollarSign, Calendar, MessageSquare, Clock, Download, Store, MapPin } from 'lucide-react';
+import { LogOut, Users, FileText, Upload, XCircle, CheckCircle, DollarSign, Calendar, MessageSquare, Clock, Download, Store, MapPin, Trophy } from 'lucide-react';
 import { LoadingOverlay } from '../components/LoadingSpinner';
+import { Leaderboard } from './Leaderboard';
 
 interface InvitedSchoolDashboardProps {
     school: School;
@@ -97,7 +98,7 @@ const SponsorGrid: React.FC = () => {
 
 export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ school, onLogout }) => {
     const { showToast } = useToast();
-    const [activeTab, setActiveTab] = useState<'delegation' | 'registration' | 'docs' | 'payments' | 'market'>('delegation');
+    const [activeTab, setActiveTab] = useState<'delegation' | 'registration' | 'docs' | 'payments' | 'market' | 'leaderboard'>('delegation');
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
     const [resources, setResources] = useState<SchoolResource[]>([]);
@@ -296,26 +297,43 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                 </div>
 
                 {/* Tabs */}
-                <div className="flex overflow-x-auto space-x-1 mb-8 border-b border-stone-200 pb-1">
-                    {[
-                        { id: 'delegation', label: 'Delegation Dashboard', icon: Users },
-                        { id: 'registration', label: 'Register Student', icon: CheckCircle },
-                        { id: 'payments', label: 'Payments', icon: DollarSign },
-                        { id: 'docs', label: 'Documentation', icon: FileText },
-                        { id: 'market', label: 'Event Market', icon: Store },
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex items-center gap-2 pb-3 px-4 text-sm font-bold transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id
-                                ? 'border-blue-600 text-blue-600'
-                                : 'border-transparent text-stone-500 hover:text-stone-700 hover:bg-stone-50 rounded-t-lg'
-                                }`}
-                        >
-                            <tab.icon size={18} />
-                            {tab.label}
-                        </button>
-                    ))}
+                <div className="mb-8">
+                    {/* Contenedor de Tabs - Grid en móvil, Flex en desktop */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap md:justify-center gap-2 p-1 bg-stone-100/50 backdrop-blur-sm rounded-xl border border-stone-200/60">
+                        {[
+                            { id: 'delegation', label: 'Delegation', icon: Users, desc: 'Your team' },
+                            { id: 'registration', label: 'Register', icon: CheckCircle, desc: 'New student' },
+                            { id: 'payments', label: 'Payments', icon: DollarSign, desc: 'History' },
+                            { id: 'docs', label: 'Docs', icon: FileText, desc: 'Resources' },
+                            { id: 'market', label: 'Market', icon: Store, desc: 'Vendors' },
+                            { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, desc: 'Rankings' },
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as any)}
+                                className={`
+                                    relative flex flex-col items-center justify-center gap-1.5 p-3 sm:px-6 sm:py-3.5 
+                                    rounded-lg text-sm font-bold transition-all duration-200 outline-none
+                                    ${activeTab === tab.id
+                                        ? 'bg-white text-blue-600 shadow-sm border border-stone-200/50 scale-[1.02] ring-1 ring-black/5'
+                                        : 'text-stone-500 hover:text-stone-700 hover:bg-white/60 border border-transparent'
+                                    }
+                                    ${tab.id === 'market' || tab.id === 'leaderboard' ? 'col-span-1 sm:col-span-1' : ''} 
+                                `}
+                            >
+                                <tab.icon size={20} className={`transition-transform duration-200 ${activeTab === tab.id ? 'scale-110' : ''}`} />
+                                <div className="text-center">
+                                    <span className="block">{tab.label}</span>
+                                    <span className={`text-[10px] sm:text-xs font-medium mt-0.5 hidden sm:block ${activeTab === tab.id ? 'text-blue-400' : 'text-stone-400'}`}>
+                                        {tab.desc}
+                                    </span>
+                                </div>
+                                {activeTab === tab.id && (
+                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-blue-500 rounded-full md:hidden"></div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Content */}
@@ -653,6 +671,12 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
 
                             <VendorList />
                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'leaderboard' && (
+                    <div className="space-y-8 animate-fade-in">
+                        <Leaderboard />
                     </div>
                 )}
             </div>

@@ -366,16 +366,11 @@ const AppContent: React.FC = () => {
               <div className={`p-2 rounded-lg ${role === 'teacher' ? 'bg-stone-800 text-yellow-400' : 'bg-yellow-400 text-stone-900'}`}>
                 <Book size={20} strokeWidth={2.5} />
               </div>
-              <span className="text-lg sm:text-xl font-bold text-stone-800">
-                Spelling Bee <span className="hidden sm:inline text-stone-400">|</span> <span className="text-stone-500 text-sm font-medium uppercase tracking-widest ml-1">{role === 'teacher' ? 'Admin' : role}</span>
+              <span className="text-lg sm:text-xl font-bold text-stone-800 flex items-center gap-1 sm:gap-2">
+                <span className="whitespace-nowrap">Spelling Bee</span>
+                <span className="hidden sm:inline text-stone-400">|</span>
+                <span className="text-stone-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest bg-stone-100 px-2 py-0.5 rounded-full">{role === 'teacher' ? 'Admin' : role}</span>
               </span>
-              <button onClick={() => setView('history')} className={`p-2 rounded-lg transition-colors ${view === 'history' ? 'bg-yellow-100 text-yellow-700' : 'hover:bg-stone-100 text-stone-500'}`} title="History">
-                <History size={20} />
-              </button>
-              <button onClick={() => setView('leaderboard')} className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${view === 'leaderboard' ? 'bg-yellow-100 text-yellow-700' : 'hover:bg-stone-100 text-stone-500'}`} title="Leaderboard">
-                <Trophy size={20} />
-                <span className="font-bold hidden sm:inline">Leaderboard</span>
-              </button>
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2">
@@ -387,6 +382,7 @@ const AppContent: React.FC = () => {
                   <NavButton target="manage" icon={List} label="Lists" />
                   <NavButton target="session" icon={Play} label="Session" />
                   <NavButton target="history" icon={History} label="History" />
+                  <NavButton target="leaderboard" icon={Trophy} label="Leaderboard" />
                 </>
               )}
 

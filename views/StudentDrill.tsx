@@ -452,6 +452,13 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                         </div>
                       )}
                     </div>
+                    {selectedLetters.length > 0 && (
+                      <div className="mt-4 text-center">
+                        <span className="text-3xl md:text-4xl font-black text-purple-600 tracking-widest break-all">
+                          {userInput}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Hidden input for typing fallback support in anagram if desired, OR just reliance on buttons. 
