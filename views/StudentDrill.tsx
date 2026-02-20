@@ -521,8 +521,17 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                     <img src={currentWord.image} className="w-full h-full object-cover" alt="Word" />
                   </div>
                 )}
-                <div>
-                  <p className="italic text-stone-500 mb-1">{currentWord?.difficulty}</p>
+                <div className="flex-1">
+                  <div className="flex gap-2 mb-1">
+                    <p className="inline-block px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full uppercase">
+                      {currentWord?.partOfSpeech || 'noun'}
+                    </p>
+                    {currentWord?.theme && (
+                      <p className="inline-block px-2 py-0.5 bg-stone-100 text-stone-600 text-xs font-medium rounded-full border border-stone-200">
+                        {currentWord.theme}
+                      </p>
+                    )}
+                  </div>
                   <p><span className="font-bold text-stone-700">Definition:</span> {currentWord?.definition}</p>
                 </div>
               </div>

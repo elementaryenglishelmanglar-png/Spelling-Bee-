@@ -13,11 +13,12 @@ export const enrichWordWithGemini = async (word: string, grade: GradeLevel): Pro
   }
 
   const model = "gemini-3-flash-preview";
-  
+
   const prompt = `
     Provide a clear definition and a simple example sentence for the spelling bee word: "${word}".
     The target audience is a Grade ${grade} student.
-    Classify the difficulty of this word for a Grade ${grade} student.
+    Classify the Part of Speech of this word (noun, verb, adjective, adverb, preposition, conjunction).
+    Also provide a short 1-3 word "theme" for this word (e.g., "Science", "Daily Life", "Animals", "Emotions").
   `;
 
   try {
@@ -37,13 +38,17 @@ export const enrichWordWithGemini = async (word: string, grade: GradeLevel): Pro
               type: Type.STRING,
               description: "A sentence using the word in context. Do not explicitly say 'Example:'. Just the sentence.",
             },
-            difficulty: {
+            partOfSpeech: {
               type: Type.STRING,
-              enum: ["Easy", "Medium", "Hard"],
-              description: "The estimated difficulty level for this grade.",
+              enum: ["noun", "verb", "adjective", "adverb", "preposition", "conjunction"],
+              description: "The syntactic part of speech of the word.",
+            },
+            theme: {
+              type: Type.STRING,
+              description: "A short 1-3 word topic or category this word belongs to (e.g., Animals, Technology).",
             },
           },
-          required: ["definition", "example", "difficulty"],
+          required: ["definition", "example", "partOfSpeech", "theme"],
         },
       },
     });
@@ -60,7 +65,8 @@ export const enrichWordWithGemini = async (word: string, grade: GradeLevel): Pro
     return {
       definition: "Definition unavailable.",
       example: `Please spell ${word}.`,
-      difficulty: "Medium",
+      partOfSpeech: "noun",
+      theme: "General",
     };
   }
 };

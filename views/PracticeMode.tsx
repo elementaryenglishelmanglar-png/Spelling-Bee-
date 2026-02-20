@@ -223,7 +223,8 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
       definition: 'Custom word added during session.',
       example: 'No example provided.',
       grade: selectedGrade,
-      difficulty: 'Medium'
+      partOfSpeech: 'noun',
+      theme: 'Custom'
     };
 
     setCurrentWord(newWord);

@@ -6,7 +6,8 @@ export interface WordEntry {
   definition: string;
   example: string;
   grade: GradeLevel;
-  difficulty?: 'Easy' | 'Medium' | 'Hard';
+  partOfSpeech?: 'noun' | 'verb' | 'adjective' | 'adverb' | 'preposition' | 'conjunction';
+  theme?: string;
   image?: string; // Base64 string for word flashcard image
   audioUrl?: string; // URL for the pronunciation audio file
 }
@@ -14,7 +15,8 @@ export interface WordEntry {
 export interface WordEnrichmentResponse {
   definition: string;
   example: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
+  partOfSpeech: 'noun' | 'verb' | 'adjective' | 'adverb' | 'preposition' | 'conjunction';
+  theme: string;
 }
 
 // The database record for a student

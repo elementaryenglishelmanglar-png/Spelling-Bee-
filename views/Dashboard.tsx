@@ -19,34 +19,75 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
     count: words.filter((w) => w.grade === grade).length,
   })), [words]);
 
-  const difficultyData = useMemo(() => {
-    const easy = words.filter(w => w.difficulty === 'Easy').length;
-    const medium = words.filter(w => w.difficulty === 'Medium' || !w.difficulty).length;
-    const hard = words.filter(w => w.difficulty === 'Hard').length;
+  const posData = useMemo(() => {
+    const noun = words.filter(w => w.partOfSpeech === 'noun' || !w.partOfSpeech).length;
+    const verb = words.filter(w => w.partOfSpeech === 'verb').length;
+    const adjective = words.filter(w => w.partOfSpeech === 'adjective').length;
+    const adverb = words.filter(w => w.partOfSpeech === 'adverb').length;
+    const preposition = words.filter(w => w.partOfSpeech === 'preposition').length;
+    const conjunction = words.filter(w => w.partOfSpeech === 'conjunction').length;
     return [
-      { name: 'Easy', value: easy, color: '#22c55e' },
-      { name: 'Medium', value: medium, color: '#f59e0b' },
-      { name: 'Hard', value: hard, color: '#ef4444' },
-    ];
+      { name: 'Noun', value: noun, color: '#22c55e' },
+      { name: 'Verb', value: verb, color: '#ef4444' },
+      { name: 'Adjective', value: adjective, color: '#3b82f6' },
+      { name: 'Adverb', value: adverb, color: '#a855f7' },
+      { name: 'Prep', value: preposition, color: '#f97316' },
+      { name: 'Conj', value: conjunction, color: '#ec4899' },
+    ].filter(item => item.value > 0);
   }, [words]);
 
-  const difficultyByGrade = useMemo(() => {
+  const posByGrade = useMemo(() => {
     return grades.map(grade => {
       const gradeWords = words.filter(w => w.grade === grade);
       return {
         name: grade === 12 ? 'G3' : `G${grade}`,
         fullName: grade === 12 ? 'Group 3' : `Grade ${grade}`,
-        Easy: gradeWords.filter(w => w.difficulty === 'Easy').length,
-        Medium: gradeWords.filter(w => w.difficulty === 'Medium' || !w.difficulty).length,
-        Hard: gradeWords.filter(w => w.difficulty === 'Hard').length,
+        Noun: gradeWords.filter(w => w.partOfSpeech === 'noun' || !w.partOfSpeech).length,
+        Verb: gradeWords.filter(w => w.partOfSpeech === 'verb').length,
+        Adj: gradeWords.filter(w => w.partOfSpeech === 'adjective').length,
+        Adv: gradeWords.filter(w => w.partOfSpeech === 'adverb').length,
+        Prep: gradeWords.filter(w => w.partOfSpeech === 'preposition').length,
+        Conj: gradeWords.filter(w => w.partOfSpeech === 'conjunction').length,
       };
     });
   }, [words]);
 
+  const wordStatsByGrade = useMemo(() => {
+    return grades.map(grade => {
+      const gradeWords = words.filter(w => w.grade === grade);
+      const totalLetters = gradeWords.reduce((sum, w) => sum + w.word.length, 0);
+      const avgLetters = gradeWords.length > 0 ? (totalLetters / gradeWords.length).toFixed(1) : 0;
+
+      const themeCounts: Record<string, number> = {};
+      gradeWords.forEach(w => {
+        const theme = w.theme || 'General';
+        themeCounts[theme] = (themeCounts[theme] || 0) + 1;
+      });
+
+      let topTheme = 'None';
+      let maxCount = 0;
+      Object.entries(themeCounts).forEach(([theme, count]) => {
+        if (count > maxCount) {
+          maxCount = count;
+          topTheme = theme;
+        }
+      });
+
+      return {
+        name: grade === 12 ? 'G3' : `G${grade}`,
+        fullName: grade === 12 ? 'Group 3' : `Grade ${grade}`,
+        avgLetters: Number(avgLetters),
+        topTheme: topTheme,
+        topThemeCount: maxCount,
+        totalWords: gradeWords.length
+      };
+    }).filter(g => g.totalWords > 0);
+  }, [words]);
+
   const totalWords = words.length;
-  const hardWords = words.filter(w => w.difficulty === 'Hard').length;
-  const easyWords = words.filter(w => w.difficulty === 'Easy').length;
-  const mediumWords = words.filter(w => w.difficulty === 'Medium' || !w.difficulty).length;
+  const nounsCount = words.filter(w => w.partOfSpeech === 'noun' || !w.partOfSpeech).length;
+  const verbsCount = words.filter(w => w.partOfSpeech === 'verb').length;
+  const adjectivesCount = words.filter(w => w.partOfSpeech === 'adjective').length;
 
   // Most failed words ranking
   const mostFailedWords = useMemo(() => {
@@ -186,8 +227,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
             <TrendingUp size={32} />
           </div>
           <div>
-            <p className="text-stone-500 text-sm font-medium">Easy Words</p>
-            <p className="text-3xl font-bold text-stone-900">{easyWords}</p>
+            <p className="text-stone-500 text-sm font-medium">Nouns</p>
+            <p className="text-3xl font-bold text-stone-900">{nounsCount}</p>
           </div>
         </div>
 
@@ -196,8 +237,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
             <Users size={32} />
           </div>
           <div>
-            <p className="text-stone-500 text-sm font-medium">Hard Words</p>
-            <p className="text-3xl font-bold text-stone-900">{hardWords}</p>
+            <p className="text-stone-500 text-sm font-medium">Verbs & Adjs</p>
+            <p className="text-3xl font-bold text-stone-900">{verbsCount + adjectivesCount}</p>
           </div>
         </div>
       </div>
@@ -241,14 +282,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
           </div>
         </div>
 
-        {/* Difficulty Distribution */}
+        {/* Part Of Speech Distribution */}
         <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm">
-          <h3 className="text-lg font-bold text-stone-800 mb-6">Difficulty Distribution</h3>
+          <h3 className="text-lg font-bold text-stone-800 mb-6">Part of Speech Overview</h3>
           <div className="h-64 w-full min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%" minWidth={300}>
               <PieChart>
                 <Pie
-                  data={difficultyData}
+                  data={posData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -257,7 +298,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {difficultyData.map((entry, index) => (
+                  {posData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -268,12 +309,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
           </div>
         </div>
 
-        {/* Difficulty by Grade */}
+        {/* Part of Speech by Grade */}
         <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm lg:col-span-2">
-          <h3 className="text-lg font-bold text-stone-800 mb-6">Difficulty Breakdown by Grade</h3>
+          <h3 className="text-lg font-bold text-stone-800 mb-6">Part of Speech Breakdown by Grade</h3>
           <div className="h-64 w-full min-h-[200px] overflow-x-auto">
             <ResponsiveContainer width="100%" height="100%" minWidth={400}>
-              <BarChart data={difficultyByGrade} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <BarChart data={posByGrade} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <XAxis
                   dataKey="name"
                   axisLine={false}
@@ -289,11 +330,44 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="Easy" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="Medium" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="Hard" stackId="a" fill="#ef4444" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="Noun" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Verb" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Adj" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Adv" stackId="a" fill="#a855f7" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Prep" stackId="a" fill="#f97316" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Conj" stackId="a" fill="#ec4899" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Word Length & Themes by Grade */}
+        <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm lg:col-span-2">
+          <h3 className="text-lg font-bold text-stone-800 mb-6">Vocabulary Complexity & Themes by Grade</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="h-64 w-full min-h-[200px]">
+              <h4 className="text-xs font-bold text-stone-500 uppercase mb-2 text-center">Avg Letters per Word</h4>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={wordStatsByGrade} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} width={30} />
+                  <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                  <Line type="monotone" dataKey="avgLetters" stroke="#8b5cf6" strokeWidth={3} dot={{ fill: '#8b5cf6', r: 4 }} name="Avg Letters" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-stone-500 uppercase mb-4">Top Themes per Grade</h4>
+              <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-2">
+                {wordStatsByGrade.map((stat, idx) => (
+                  <div key={idx} className="bg-stone-50 p-3 rounded-xl border border-stone-200 flex flex-col justify-center">
+                    <span className="text-xs font-bold text-stone-400 mb-1">{stat.fullName}</span>
+                    <span className="text-sm font-bold text-stone-800 truncate" title={stat.topTheme}>{stat.topTheme}</span>
+                    <span className="text-[10px] text-stone-500 mt-1">{stat.topThemeCount} words</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 

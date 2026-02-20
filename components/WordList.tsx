@@ -193,26 +193,36 @@ const WordListItem: React.FC<WordListItemProps> = ({
             </div>
           </div>
           <div className="w-full md:w-48 space-y-3 flex flex-col">
-            <div>
-              <label className="text-xs font-bold text-stone-500 uppercase">Difficulty</label>
-              <select
-                value={editForm.difficulty}
-                onChange={e => setEditForm({ ...editForm, difficulty: e.target.value as any })}
-                className="w-full p-2 border border-stone-300 rounded-lg text-sm"
-              >
-                <option value="Easy">Easy</option>
-                <option value="Medium">Medium</option>
-                <option value="Hard">Hard</option>
-              </select>
-            </div>
-            <div className="flex gap-2 mt-auto">
-              <button onClick={handleSave} className="flex-1 bg-green-600 text-white p-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700">
-                <Check size={16} /> Save
-              </button>
-              <button onClick={handleCancel} className="flex-1 bg-stone-200 text-stone-700 p-2 rounded-lg flex items-center justify-center gap-2 hover:bg-stone-300">
-                <X size={16} />
-              </button>
-            </div>
+            <label className="text-xs font-bold text-stone-500 uppercase">Part of Speech</label>
+            <select
+              value={editForm.partOfSpeech || 'noun'}
+              onChange={e => setEditForm({ ...editForm, partOfSpeech: e.target.value as any })}
+              className="w-full p-2 border border-stone-300 rounded-lg text-sm"
+            >
+              <option value="noun">Noun</option>
+              <option value="verb">Verb</option>
+              <option value="adjective">Adjective</option>
+              <option value="adverb">Adverb</option>
+              <option value="preposition">Preposition</option>
+              <option value="conjunction">Conjunction</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-stone-500 uppercase">Theme</label>
+            <input
+              value={editForm.theme || ''}
+              onChange={e => setEditForm({ ...editForm, theme: e.target.value })}
+              className="w-full p-2 border border-stone-300 rounded-lg text-sm"
+              placeholder="e.g. Science"
+            />
+          </div>
+          <div className="flex gap-2 mt-auto">
+            <button onClick={handleSave} className="flex-1 bg-green-600 text-white p-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700">
+              <Check size={16} /> Save
+            </button>
+            <button onClick={handleCancel} className="flex-1 bg-stone-200 text-stone-700 p-2 rounded-lg flex items-center justify-center gap-2 hover:bg-stone-300">
+              <X size={16} />
+            </button>
           </div>
         </div>
       </div>
@@ -235,12 +245,19 @@ const WordListItem: React.FC<WordListItemProps> = ({
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h3 className="text-lg font-bold text-stone-800">{word.word}</h3>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${word.difficulty === 'Hard' ? 'bg-red-100 text-red-700' :
-              word.difficulty === 'Medium' ? 'bg-orange-100 text-orange-700' :
-                'bg-green-100 text-green-700'
+            <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase
+              ${word.partOfSpeech === 'verb' ? 'bg-red-100 text-red-700' :
+                word.partOfSpeech === 'adjective' ? 'bg-blue-100 text-blue-700' :
+                  word.partOfSpeech === 'adverb' ? 'bg-purple-100 text-purple-700' :
+                    'bg-green-100 text-green-700'
               }`}>
-              {word.difficulty || 'Medium'}
+              {word.partOfSpeech || 'noun'}
             </span>
+            {word.theme && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-500 font-medium border border-stone-200">
+                {word.theme}
+              </span>
+            )}
             <button
               onClick={() => speakWord(word.word, word.audioUrl)}
               className={`p-1.5 rounded-full transition-colors ${word.audioUrl ? 'text-blue-500 hover:bg-blue-50' : 'text-stone-400 hover:text-stone-800 hover:bg-stone-100'}`}
@@ -289,15 +306,15 @@ const WordListItem: React.FC<WordListItemProps> = ({
 
 export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelete, onUpdate }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'Easy' | 'Medium' | 'Hard'>('all');
+  const [partOfSpeechFilter, setPartOfSpeechFilter] = useState<'all' | 'noun' | 'verb' | 'adjective' | 'adverb' | 'preposition' | 'conjunction'>('all');
   const [showFilters, setShowFilters] = useState(false);
 
   const filteredWords = useMemo(() => {
     let result = words.filter(w => w.grade === currentGrade);
 
-    // Filter by difficulty
-    if (difficultyFilter !== 'all') {
-      result = result.filter(w => w.difficulty === difficultyFilter);
+    // Filter by Part of Speech
+    if (partOfSpeechFilter !== 'all') {
+      result = result.filter(w => w.partOfSpeech === partOfSpeechFilter);
     }
 
     // Filter by search query
@@ -306,21 +323,23 @@ export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelet
       result = result.filter(w =>
         w.word.toLowerCase().includes(query) ||
         w.definition.toLowerCase().includes(query) ||
-        w.example.toLowerCase().includes(query)
+        w.example.toLowerCase().includes(query) ||
+        (w.theme && w.theme.toLowerCase().includes(query))
       );
     }
 
     return result;
-  }, [words, currentGrade, difficultyFilter, searchQuery]);
+  }, [words, currentGrade, partOfSpeechFilter, searchQuery]);
 
   const exportToCSV = () => {
     const csvContent = [
-      ['Word', 'Definition', 'Example', 'Difficulty', 'Grade'],
+      ['Word', 'Definition', 'Example', 'Part of Speech', 'Theme', 'Grade'],
       ...filteredWords.map(w => [
         w.word,
         w.definition,
         w.example,
-        w.difficulty || 'Medium',
+        w.partOfSpeech || 'noun',
+        w.theme || '',
         w.grade.toString()
       ])
     ].map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -389,23 +408,17 @@ export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelet
         {showFilters && (
           <div className="mt-3 pt-3 border-t border-stone-200">
             <div className="flex flex-wrap gap-2">
-              <span className="text-xs font-bold text-stone-500 uppercase self-center">Difficulty:</span>
-              {(['all', 'Easy', 'Medium', 'Hard'] as const).map(diff => (
+              <span className="text-xs font-bold text-stone-500 uppercase self-center">Part of Speech:</span>
+              {(['all', 'noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction'] as const).map(pos => (
                 <button
-                  key={diff}
-                  onClick={() => setDifficultyFilter(diff)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${difficultyFilter === diff
-                    ? diff === 'all'
-                      ? 'bg-stone-800 text-white'
-                      : diff === 'Hard'
-                        ? 'bg-red-600 text-white'
-                        : diff === 'Medium'
-                          ? 'bg-orange-600 text-white'
-                          : 'bg-green-600 text-white'
+                  key={pos}
+                  onClick={() => setPartOfSpeechFilter(pos)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold capitalize transition-colors ${partOfSpeechFilter === pos
+                    ? 'bg-stone-800 text-white'
                     : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                     }`}
                 >
-                  {diff === 'all' ? 'All' : diff}
+                  {pos}
                 </button>
               ))}
             </div>

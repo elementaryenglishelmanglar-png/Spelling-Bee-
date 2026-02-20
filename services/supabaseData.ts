@@ -37,7 +37,8 @@ export async function fetchWords(): Promise<WordEntry[]> {
     definition: row.definition,
     example: row.example,
     grade: row.grade as GradeLevel,
-    difficulty: row.difficulty ?? undefined,
+    partOfSpeech: row.part_of_speech ?? undefined,
+    theme: row.theme ?? undefined,
     image: row.image_url ?? undefined,
     audioUrl: row.audio_url ?? undefined,
   }));
@@ -59,7 +60,8 @@ export async function addWord(entry: WordEntry): Promise<WordEntry> {
       definition: entry.definition,
       example: entry.example,
       grade: entry.grade,
-      difficulty: entry.difficulty ?? null,
+      part_of_speech: entry.partOfSpeech ?? null,
+      theme: entry.theme ?? null,
       image_url: imageUrl,
       audio_url: entry.audioUrl ?? null,
     })
@@ -72,7 +74,8 @@ export async function addWord(entry: WordEntry): Promise<WordEntry> {
     definition: data.definition,
     example: data.example,
     grade: data.grade,
-    difficulty: data.difficulty ?? undefined,
+    partOfSpeech: data.part_of_speech ?? undefined,
+    theme: data.theme ?? undefined,
     image: data.image_url ?? undefined,
     audioUrl: data.audio_url ?? undefined,
   };
@@ -93,7 +96,8 @@ export async function updateWord(entry: WordEntry): Promise<WordEntry> {
     definition: entry.definition,
     example: entry.example,
     grade: entry.grade,
-    difficulty: entry.difficulty ?? null,
+    part_of_speech: entry.partOfSpeech ?? null,
+    theme: entry.theme ?? null,
     image_url: imageUrl,
     audio_url: entry.audioUrl ?? null,
   };
@@ -105,7 +109,8 @@ export async function updateWord(entry: WordEntry): Promise<WordEntry> {
     definition: data.definition,
     example: data.example,
     grade: data.grade,
-    difficulty: data.difficulty ?? undefined,
+    partOfSpeech: data.part_of_speech ?? undefined,
+    theme: data.theme ?? undefined,
     image: data.image_url ?? undefined,
     audioUrl: data.audio_url ?? undefined,
   };
