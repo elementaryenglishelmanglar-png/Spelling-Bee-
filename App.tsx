@@ -71,15 +71,22 @@ const AppContent: React.FC = () => {
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [showIosInstallBanner, setShowIosInstallBanner] = useState(false);
 
   useEffect(() => {
-    // Listen for the beforeinstallprompt event
+    // Detect iOS
+    const isIos = () => {
+      const userAgent = window.navigator.userAgent.toLowerCase();
+      return /iphone|ipad|ipod/.test(userAgent);
+    };
+
+    // Detect if app is already in standalone mode
+    const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator as any).standalone;
+
+    // Listen for the beforeinstallprompt event (Android / Desktop Chrome)
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
-      // Update UI notify the user they can install the PWA
       setShowInstallBanner(true);
     };
 
@@ -88,9 +95,15 @@ const AppContent: React.FC = () => {
     // Check if app is already installed to hide banner
     window.addEventListener('appinstalled', () => {
       setShowInstallBanner(false);
+      setShowIosInstallBanner(false);
       setDeferredPrompt(null);
       showToast('¡App instalada exitosamente!', 'success');
     });
+
+    // If it's iOS and not already installed, show the custom iOS text banner
+    if (isIos() && !isInStandaloneMode()) {
+      setShowIosInstallBanner(true);
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -417,6 +430,26 @@ const AppContent: React.FC = () => {
               className="p-1.5 text-stone-400 hover:text-white transition-colors"
             >
               <LogOut size={16} className="rotate-45" /> {/* Using LogOut as close temporarily or can bring X */}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showIosInstallBanner && (
+        <div className="bg-stone-900 text-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in z-[60] sticky top-0">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🐝</span>
+            <div className="text-sm sm:text-base font-medium">
+              <p>Instala la App oficial del Spelling Bee:</p>
+              <p className="text-stone-300 text-xs mt-1 font-normal">Pulsa el botón Compartir y luego "Agregar a inicio"</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setShowIosInstallBanner(false)}
+              className="p-1.5 text-stone-400 hover:text-white transition-colors ml-auto"
+            >
+              <LogOut size={16} className="rotate-45" />
             </button>
           </div>
         </div>
