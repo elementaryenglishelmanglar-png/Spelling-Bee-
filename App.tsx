@@ -68,6 +68,35 @@ const AppContent: React.FC = () => {
   const [savingSession, setSavingSession] = useState(false);
   const [activeStudent, setActiveStudent] = useState<StudentProfile | null>(null);
 
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(() => {
+    // Listen for the beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+      // Update UI notify the user they can install the PWA
+      setShowInstallBanner(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Check if app is already installed to hide banner
+    window.addEventListener('appinstalled', () => {
+      setShowInstallBanner(false);
+      setDeferredPrompt(null);
+      showToast('¡App instalada exitosamente!', 'success');
+    });
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
   useEffect(() => {
     // Load sponsors for global footer usage
     const loadSponsors = async () => {
@@ -321,6 +350,17 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    // Show the install prompt
+    deferredPrompt.prompt();
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    // We've used the prompt, and can't use it again, throw it away
+    setDeferredPrompt(null);
+    setShowInstallBanner(false);
+  };
+
   // 1. Welcome Screen
   if (!role) {
     return <WelcomeScreen onSelectRole={handleRoleSelect} beeImageUrl={BEE_IMAGE_URL} />;
@@ -358,8 +398,32 @@ const AppContent: React.FC = () => {
           {dataError} (comprobando conexión o variables de Supabase)
         </div>
       )}
+
+      {showInstallBanner && (
+        <div className="bg-stone-900 text-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in z-[60] sticky top-0">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🐝</span>
+            <p className="text-sm sm:text-base font-medium">Instala la App oficial del Spelling Bee para una mejor experiencia</p>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleInstallClick}
+              className="px-4 py-1.5 bg-yellow-400 text-stone-900 text-sm font-bold rounded-lg hover:bg-yellow-500 transition-colors w-full sm:w-auto"
+            >
+              Instalar
+            </button>
+            <button
+              onClick={() => setShowInstallBanner(false)}
+              className="p-1.5 text-stone-400 hover:text-white transition-colors"
+            >
+              <LogOut size={16} className="rotate-45" /> {/* Using LogOut as close temporarily or can bring X */}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Navbar */}
-      <nav className="bg-white border-b border-stone-200 sticky top-0 z-50">
+      <nav className="bg-white border-b border-stone-200 sticky top-[env(safe-area-inset-top)] z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center gap-3">
