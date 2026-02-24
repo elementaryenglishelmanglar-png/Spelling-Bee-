@@ -296,11 +296,15 @@ const AppContent: React.FC = () => {
       try {
         const added = await addStudentToSupabase(newStudent);
         setStudents(prev => [...prev, added]);
+        showToast(`Student "${newStudent.firstName} ${newStudent.lastName}" registered successfully`, 'success');
       } catch (e) {
+        const errorMsg = e instanceof Error ? e.message : 'Failed to add student';
+        showToast(`Error registering student: ${errorMsg}`, 'error');
         console.error('Failed to add student', e);
       }
     } else {
       setStudents(prev => [...prev, newStudent]);
+      showToast(`Student "${newStudent.firstName} ${newStudent.lastName}" registered successfully`, 'success');
     }
   };
 
@@ -309,11 +313,15 @@ const AppContent: React.FC = () => {
       try {
         const result = await updateStudentInSupabase(updated);
         setStudents(prev => prev.map(s => s.id === result.id ? result : s));
+        showToast(`Student "${updated.firstName} ${updated.lastName}" updated successfully`, 'success');
       } catch (e) {
+        const errorMsg = e instanceof Error ? e.message : 'Failed to update student';
+        showToast(`Error updating student: ${errorMsg}`, 'error');
         console.error('Failed to update student', e);
       }
     } else {
       setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
+      showToast(`Student "${updated.firstName} ${updated.lastName}" updated successfully`, 'success');
     }
   };
 
@@ -322,11 +330,15 @@ const AppContent: React.FC = () => {
       try {
         await deleteStudentFromSupabase(id);
         setStudents(prev => prev.filter(s => s.id !== id));
+        showToast('Student deleted successfully', 'success');
       } catch (e) {
+        const errorMsg = e instanceof Error ? e.message : 'Failed to delete student';
+        showToast(`Error deleting student: ${errorMsg}`, 'error');
         console.error('Failed to delete student', e);
       }
     } else {
       setStudents(prev => prev.filter(s => s.id !== id));
+      showToast('Student deleted successfully', 'success');
     }
   };
 
