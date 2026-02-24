@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { WordEntry, GradeLevel, Student, Attempt, Session, Stage, ContestType, StudentProfile } from '../types';
 import { Volume2, Eye, EyeOff, Play, CheckCircle, XCircle, Users, Settings, Save, RefreshCw, UserCheck, AlertCircle, Mic, Trash2, RotateCcw, CheckSquare, Square, ChevronLeft, ChevronRight, SkipForward, Plus, Keyboard, Award, Building2, School, FastForward, Flag } from 'lucide-react';
+import { getGradeLabel } from '../lib/gradeLabel';
 
 interface PracticeModeProps {
   words: WordEntry[];
@@ -428,11 +429,11 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ words, registeredStu
 
           {/* Student Selection (Previously Registration) */}
           <div>
-            <label className="block text-sm font-bold text-stone-600 mb-2">Participating Students (Grade {selectedGrade})</label>
+            <label className="block text-sm font-bold text-stone-600 mb-2">Participating Students ({getGradeLabel(selectedGrade)})</label>
             <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 max-h-60 overflow-y-auto">
               {availableStudents.length === 0 ? (
                 <div className="text-center text-stone-400 py-4 italic">
-                  No students registered for Grade {selectedGrade}. <br />Go to the "Students" tab to add them.
+                  No students registered for {getGradeLabel(selectedGrade)}. <br />Go to the "Students" tab to add them.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

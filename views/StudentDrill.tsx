@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { WordEntry, GradeLevel, StudentProfile } from '../types';
+import { getGradeLabel } from '../lib/gradeLabel';
 import { Volume2, CheckCircle, XCircle, ChevronRight, Trophy, Shuffle, Heart, HeartCrack } from 'lucide-react';
 import { recordStudentStat, addCoins, checkAndUpdateStreak, fetchStudentWordStats } from '../services/supabaseData';
 import confetti from 'canvas-confetti';
@@ -310,7 +311,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
         <div className="flex items-center justify-between p-4 bg-stone-50 rounded-xl mb-8 border border-stone-100">
           <div className="text-left">
             <p className="text-xs font-bold text-stone-400 uppercase">Grade Level</p>
-            <p className="font-bold text-stone-700">Grade {selectedGrade}</p>
+            <p className="font-bold text-stone-700">{getGradeLabel(selectedGrade)}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-bold text-stone-400 uppercase">Words Available</p>

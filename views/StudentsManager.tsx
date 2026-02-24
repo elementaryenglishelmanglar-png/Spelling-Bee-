@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { StudentProfile, GradeLevel } from '../types';
 import { Users, Plus, Trash2, School, Camera, X, Pencil } from 'lucide-react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { getGradeLabel } from '../lib/gradeLabel';
 
 interface StudentsManagerProps {
   students: StudentProfile[];
@@ -341,7 +342,7 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
                       <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">
                         <span className="flex items-center gap-1"><School size={12} /> {student.school}</span>
                         <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-                        <span className="font-bold text-stone-400">Grade {student.grade}</span>
+                        <span className="font-bold text-stone-400">{getGradeLabel(student.grade)}</span>
                       </div>
                     </div>
                   </div>

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { StudentProfile, GradeLevel, WordEntry } from '../types';
+import { getGradeLabel } from '../lib/gradeLabel';
 import { Volume2, Eye, EyeOff, RefreshCw, ArrowRight, LogIn, User, Sparkles, GraduationCap, Trophy, LayoutDashboard, Award } from 'lucide-react';
 import { studentLogin } from '../services/supabaseData';
 import { StudentDrill } from './StudentDrill';
@@ -161,7 +162,7 @@ export const StudentGenerator: React.FC<StudentGeneratorProps> = ({ words, beeIm
         <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm text-center relative z-10 animate-fade-in">
           <h2 className="text-2xl font-bold text-stone-800 mb-2">Random Word Generator</h2>
           <p className="text-stone-500 mb-6">
-            Practicing <span className="font-bold text-stone-800">Grade {selectedGrade}</span> words
+            Practicing <span className="font-bold text-stone-800">{getGradeLabel(selectedGrade)}</span> words
           </p>
 
           {/* Grade selection removed for students */}
@@ -171,7 +172,7 @@ export const StudentGenerator: React.FC<StudentGeneratorProps> = ({ words, beeIm
               {beeImageUrl && (
                 <img src={beeImageUrl} className="w-24 h-24 object-contain mb-4 animate-bounce" alt="Waiting Bee" />
               )}
-              <p className="text-stone-400 mb-4 font-medium">{gradeWords.length} words available for Grade {selectedGrade}</p>
+              <p className="text-stone-400 mb-4 font-medium">{gradeWords.length} words available for {getGradeLabel(selectedGrade)}</p>
               <button
                 onClick={generateWord}
                 disabled={gradeWords.length === 0}

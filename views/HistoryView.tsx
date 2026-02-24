@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Session, GradeLevel } from '../types';
 import { Calendar, BookOpen, UserCheck, ChevronRight, X, Award, Building2, Clock, Filter, Search, Trash2 } from 'lucide-react';
+import { getGradeLabel } from '../lib/gradeLabel';
 
 interface HistoryViewProps {
   sessions: Session[];
@@ -90,7 +91,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ sessions, onDeleteSess
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm text-stone-500">
                 <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(selectedSession.date).toLocaleString()}</span>
                 <span className="flex items-center gap-1"><UserCheck size={14} /> Moderator: <span className="font-semibold text-stone-700">{selectedSession.moderator}</span></span>
-                <span className="flex items-center gap-1"><BookOpen size={14} /> Grade {selectedSession.grade}</span>
+                <span className="flex items-center gap-1"><BookOpen size={14} /> {getGradeLabel(selectedSession.grade)}</span>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -341,7 +342,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ sessions, onDeleteSess
                         {session.moderator}
                       </h3>
                       <span className="text-stone-300 hidden sm:inline">|</span>
-                      <span className="text-sm font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded">Grade {session.grade}</span>
+                      <span className="text-sm font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded">{getGradeLabel(session.grade)}</span>
                     </div>
                   </div>
 

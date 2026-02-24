@@ -3,6 +3,7 @@ import { School, StudentProfile, GradeLevel, Payment, SchoolResource, Vendor, Sp
 import { fetchStudents, addStudent, deleteStudent, fetchPayments, addPayment, fetchSchoolResources, fetchVendors, fetchSponsors } from '../services/supabaseData';
 import { useToast } from '../lib/toastContext';
 import { LogOut, Users, FileText, Upload, XCircle, CheckCircle, DollarSign, Calendar, MessageSquare, Clock, Download, Store, MapPin, Trophy } from 'lucide-react';
+import { getGradeLabel } from '../lib/gradeLabel';
 import { LoadingOverlay } from '../components/LoadingSpinner';
 import { Leaderboard } from './Leaderboard';
 
@@ -379,7 +380,7 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                                         </div>
                                         <div className="p-4 flex-1">
                                             <h3 className="font-bold text-lg text-stone-800 truncate">{student.firstName} {student.lastName}</h3>
-                                            <p className="text-stone-500 text-sm font-medium">Grade {student.grade}</p>
+                                            <p className="text-stone-500 text-sm font-medium">{getGradeLabel(student.grade)}</p>
                                             <div className="mt-4 pt-4 border-t border-stone-100 flex items-center gap-2 text-sm text-green-600 font-bold">
                                                 <CheckCircle size={16} />
                                                 <span>Registered</span>
