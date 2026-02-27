@@ -15,7 +15,7 @@ import { Leaderboard } from './views/Leaderboard';
 import { SponsorsManager } from './views/SponsorsManager';
 import { VendorsManager } from './views/VendorsManager';
 
-import { LayoutDashboard, List, Play, Book, History, LogOut, Sparkles, GraduationCap, Users, School as SchoolIcon, Globe, Trophy } from 'lucide-react';
+import { LayoutDashboard, List, Play, Book, History, LogOut, Sparkles, GraduationCap, Users, School as SchoolIcon, Globe, Trophy, X, Download, Share2 } from 'lucide-react';
 import { hasTeacherSession, clearTeacherSession, hasSchoolSession, getSchoolSession, clearSchoolSession, SchoolSessionData } from './lib/auth';
 import { ToastProvider, useToast } from './lib/toastContext';
 import { ToastContainer } from './components/Toast';
@@ -345,13 +345,13 @@ const AppContent: React.FC = () => {
   const NavButton = ({ target, icon: Icon, label }: { target: ViewState | 'interschool', icon: any, label: string }) => (
     <button
       onClick={() => setView(target as ViewState)}
-      className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all text-sm font-bold ${view === target
-        ? role === 'teacher' ? 'bg-stone-800 text-yellow-400' : 'bg-yellow-400 text-stone-900 shadow-sm'
-        : 'text-stone-500 hover:bg-orange-50 hover:text-stone-800'
+      className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all text-sm font-bold flex-shrink-0 ${view === target
+        ? role === 'teacher' ? 'bg-stone-800 text-amber-500 shadow-[inset_0_-2px_0_0_#f59e0b]' : 'bg-amber-400 text-stone-900 shadow-sm'
+        : role === 'teacher' ? 'text-stone-400 hover:text-stone-100 hover:bg-stone-800/50' : 'text-stone-500 hover:bg-orange-50 hover:text-stone-800'
         }`}
     >
-      <Icon size={18} />
-      <span className="hidden sm:inline">{label}</span>
+      <Icon size={18} className={view === target && role === 'teacher' ? 'animate-pulse' : ''} />
+      <span>{label}</span>
     </button>
   );
 
@@ -414,110 +414,182 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // Inline PWA install card (used inside student & teacher views, not sticky-top)
+  const PwaInstallCard = () => {
+    if (!showInstallBanner && !showIosInstallBanner) return null;
+    return (
+      <div className="animate-fade-in mb-4">
+        {showInstallBanner && (
+          <div className="flex items-center justify-between gap-3 bg-stone-900 text-white px-4 py-3 rounded-2xl shadow-md">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🐝</span>
+              <div>
+                <p className="text-sm font-semibold leading-tight">Instala la App oficial del Spelling Bee</p>
+                <p className="text-stone-400 text-xs mt-0.5">Acceso rápido desde tu pantalla de inicio</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={handleInstallClick}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 text-stone-900 text-xs font-bold rounded-xl hover:bg-amber-500 transition-colors"
+              >
+                <Download size={13} />
+                Instalar
+              </button>
+              <button
+                onClick={() => setShowInstallBanner(false)}
+                className="p-1 text-stone-400 hover:text-white transition-colors"
+                aria-label="Cerrar"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+        {showIosInstallBanner && (
+          <div className="flex items-center justify-between gap-3 bg-stone-900 text-white px-4 py-3 rounded-2xl shadow-md mt-2">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🐝</span>
+              <div>
+                <p className="text-sm font-semibold leading-tight">Instala la App oficial del Spelling Bee</p>
+                <p className="text-stone-400 text-xs mt-0.5">
+                  Pulsa <Share2 size={11} className="inline mx-0.5" /> Compartir → "Agregar a pantalla de inicio"
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowIosInstallBanner(false)}
+              className="p-1 text-stone-400 hover:text-white transition-colors flex-shrink-0"
+              aria-label="Cerrar"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Bottom navigation tab for students
+  const StudentBottomNav = () => {
+    const tabs = [
+      { target: 'student-generator' as ViewState, icon: Sparkles, label: 'Student Zone' },
+      { target: 'leaderboard' as ViewState, icon: Trophy, label: 'Leaderboard' },
+    ];
+    return (
+      <nav
+        aria-label="Student navigation"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-stone-200 flex"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {tabs.map(({ target, icon: Icon, label }) => {
+          const isActive = view === target;
+          return (
+            <button
+              key={target}
+              onClick={() => setView(target)}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-semibold transition-colors
+                ${isActive
+                  ? 'text-amber-500'
+                  : 'text-stone-400 hover:text-stone-600'
+                }`}
+            >
+              <Icon
+                size={22}
+                strokeWidth={isActive ? 2.5 : 1.8}
+                className={isActive ? 'text-amber-500' : 'text-stone-400'}
+              />
+              <span>{label}</span>
+            </button>
+          );
+        })}
+        {/* Logout tab */}
+        <button
+          onClick={handleLogout}
+          className="flex-shrink-0 flex flex-col items-center justify-center gap-1 py-2.5 px-4 text-[11px] font-semibold text-stone-400 hover:text-red-500 transition-colors"
+          title="Salir"
+        >
+          <LogOut size={22} strokeWidth={1.8} />
+          <span>Salir</span>
+        </button>
+      </nav>
+    );
+  };
+
   // 4. Main App Layout (Admin & Student)
   return (
-    <div className="min-h-screen bg-orange-50/30 flex flex-col font-sans">
+    <div className="min-h-screen bg-stone-50 flex flex-col font-sans">
       <LoadingOverlay isLoading={savingSession} text="Saving session..." />
+
       {dataError && (
         <div className="bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-center text-sm font-medium">
           {dataError} (comprobando conexión o variables de Supabase)
         </div>
       )}
 
-      {showInstallBanner && (
-        <div className="bg-stone-900 text-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in z-[60] sticky top-0">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🐝</span>
-            <p className="text-sm sm:text-base font-medium">Instala la App oficial del Spelling Bee para una mejor experiencia</p>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              onClick={handleInstallClick}
-              className="px-4 py-1.5 bg-yellow-400 text-stone-900 text-sm font-bold rounded-lg hover:bg-yellow-500 transition-colors w-full sm:w-auto"
-            >
-              Instalar
-            </button>
-            <button
-              onClick={() => setShowInstallBanner(false)}
-              className="p-1.5 text-stone-400 hover:text-white transition-colors"
-            >
-              <LogOut size={16} className="rotate-45" /> {/* Using LogOut as close temporarily or can bring X */}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ── Top Navigation Bar (Teachers only) ── */}
+      {role === 'teacher' && (
+        <nav className="bg-stone-900 border-b border-stone-800 sticky top-0 z-50 shadow-xl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between py-3 lg:h-16 gap-3 lg:gap-0">
+              {/* Brand */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-stone-800 text-amber-500 shadow-inner">
+                    <Book size={20} strokeWidth={2.5} />
+                  </div>
+                  <span className="text-xl sm:text-2xl font-black text-stone-50 flex items-center gap-2 tracking-tight font-serif">
+                    <span className="whitespace-nowrap">Spelling Bee</span>
+                    <span className="hidden sm:inline text-stone-700 font-sans font-light">|</span>
+                    <span className="text-stone-900 bg-amber-500 text-[10px] sm:text-xs font-black uppercase tracking-widest px-2.5 py-1 rounded-md font-sans">
+                      Admin
+                    </span>
+                  </span>
+                </div>
 
-      {showIosInstallBanner && (
-        <div className="bg-stone-900 text-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in z-[60] sticky top-0">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🐝</span>
-            <div className="text-sm sm:text-base font-medium">
-              <p>Instala la App oficial del Spelling Bee:</p>
-              <p className="text-stone-300 text-xs mt-1 font-normal">Pulsa el botón Compartir y luego "Agregar a inicio"</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              onClick={() => setShowIosInstallBanner(false)}
-              className="p-1.5 text-stone-400 hover:text-white transition-colors ml-auto"
-            >
-              <LogOut size={16} className="rotate-45" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Navbar */}
-      <nav className="bg-white border-b border-stone-200 sticky top-[env(safe-area-inset-top)] z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${role === 'teacher' ? 'bg-stone-800 text-yellow-400' : 'bg-yellow-400 text-stone-900'}`}>
-                <Book size={20} strokeWidth={2.5} />
+                {/* Mobile Logout (shows in flex row next to brand on small screens) */}
+                <button
+                  onClick={handleLogout}
+                  className="lg:hidden p-2 text-stone-400 hover:text-rose-400 hover:bg-stone-800/80 rounded-lg transition-colors"
+                  title="Logout"
+                >
+                  <LogOut size={20} />
+                </button>
               </div>
-              <span className="text-lg sm:text-xl font-bold text-stone-800 flex items-center gap-1 sm:gap-2">
-                <span className="whitespace-nowrap">Spelling Bee</span>
-                <span className="hidden sm:inline text-stone-400">|</span>
-                <span className="text-stone-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest bg-stone-100 px-2 py-0.5 rounded-full">{role === 'teacher' ? 'Admin' : role}</span>
-              </span>
-            </div>
 
-            <div className="flex items-center gap-1 sm:gap-2">
-              {role === 'teacher' && (
-                <>
-                  <NavButton target="dashboard" icon={LayoutDashboard} label="Dashboard" />
-                  <NavButton target="students" icon={Users} label="Students" />
-                  <NavButton target="interschool" icon={Globe} label="Interschool" />
-                  <NavButton target="manage" icon={List} label="Lists" />
-                  <NavButton target="session" icon={Play} label="Session" />
-                  <NavButton target="history" icon={History} label="History" />
-                  <NavButton target="leaderboard" icon={Trophy} label="Leaderboard" />
-                </>
-              )}
+              {/* Nav items (Scrollable horizontally on mobile to prevent accidental touches) */}
+              <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-hide -mx-4 px-4 lg:mx-0 lg:px-0">
+                <NavButton target="dashboard" icon={LayoutDashboard} label="Dashboard" />
+                <NavButton target="students" icon={Users} label="Students" />
+                <NavButton target="interschool" icon={Globe} label="Interschool" />
+                <NavButton target="manage" icon={List} label="Lists" />
+                <NavButton target="session" icon={Play} label="Session" />
+                <NavButton target="history" icon={History} label="History" />
+                <NavButton target="leaderboard" icon={Trophy} label="Leaderboard" />
 
-              {role === 'student' && (
-                <>
-                  <NavButton target="student-generator" icon={Sparkles} label="Student Zone" />
-                  <NavButton target="leaderboard" icon={Trophy} label="Leaderboard" />
-                </>
-              )}
+                <div className="hidden lg:block h-6 w-px bg-stone-700 mx-2" />
 
-              <div className="h-6 w-px bg-stone-200 mx-2"></div>
-
-              <button
-                onClick={handleLogout}
-                className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                title="Switch Role / Logout"
-              >
-                <LogOut size={18} />
-              </button>
+                {/* Desktop Logout */}
+                <button
+                  onClick={handleLogout}
+                  className="hidden lg:flex p-2 text-stone-400 hover:text-rose-400 hover:bg-stone-800 rounded-lg transition-colors flex-shrink-0"
+                  title="Logout"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </nav>
+        </nav>
+      )}
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* ── Main Content ── */}
+      <main
+        className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6
+          ${role === 'student' ? 'pb-28' : 'py-8'}`}
+      >
+        {/* PWA install card — inline, only when relevant */}
+        <PwaInstallCard />
 
         {/* --- TEACHER / ADMIN VIEWS --- */}
         {role === 'teacher' && (
@@ -534,9 +606,7 @@ const AppContent: React.FC = () => {
             )}
 
             {/* @ts-ignore */}
-            {view === 'interschool' && (
-              <InterschoolManager />
-            )}
+            {view === 'interschool' && <InterschoolManager />}
 
             {/* @ts-ignore */}
             {view === 'manage-sponsors' && <SponsorsManager />}
@@ -556,8 +626,8 @@ const AppContent: React.FC = () => {
                         key={g}
                         onClick={() => setManageGrade(g as GradeLevel)}
                         className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${manageGrade === g
-                          ? 'bg-yellow-400 text-stone-900 shadow-md'
-                          : 'text-stone-500 hover:bg-orange-50 hover:text-stone-800'
+                          ? 'bg-amber-400 text-stone-900 shadow-md'
+                          : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
                           }`}
                       >
                         {g === 12 ? 'Group 3' : `Grade ${g}`}
@@ -566,7 +636,7 @@ const AppContent: React.FC = () => {
                   </div>
                 </header>
                 <WordForm currentGrade={manageGrade} onAddWord={addWord} />
-                <div className="bg-stone-200 h-px w-full my-6"></div>
+                <div className="bg-stone-200 h-px w-full my-6" />
                 <div className="space-y-4">
                   <h3 className="text-lg font-bold text-stone-700 flex items-center justify-between">
                     <span>Current List (Grade {manageGrade})</span>
@@ -598,7 +668,7 @@ const AppContent: React.FC = () => {
                 onDeleteSession={async (id) => {
                   if (isSupabaseConfigured()) {
                     try {
-                      await deleteSession(id); // Ensure deleteSession is imported from services
+                      await deleteSession(id);
                       setSessions(prev => prev.filter(s => s.id !== id));
                       showToast('Session deleted', 'success');
                     } catch (e) {
@@ -611,11 +681,10 @@ const AppContent: React.FC = () => {
                 }}
               />
             )}
+
             {view === 'leaderboard' && <Leaderboard />}
           </>
         )}
-
-
 
         {/* --- STUDENT VIEWS --- */}
         {role === 'student' && (
@@ -638,45 +707,48 @@ const AppContent: React.FC = () => {
             {view === 'leaderboard' && <Leaderboard />}
           </>
         )}
-
       </main>
 
-      <footer className="bg-white border-t border-stone-200 py-8 mt-12">
-        <div className="max-w-7xl mx-auto px-4">
+      {/* ── Student Bottom Navigation Bar ── */}
+      {role === 'student' && <StudentBottomNav />}
 
-          {/* Sponsors Section */}
-          {sponsors.length > 0 && (
-            <div className="mb-8 border-b border-stone-100 pb-8">
-              <h3 className="text-center text-sm font-bold text-stone-400 uppercase tracking-widest mb-6">Event Sponsors</h3>
-              <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-80 grayscale hover:grayscale-0 transition-all duration-500">
-                {sponsors.map(s => (
-                  <a
-                    key={s.id}
-                    href={s.websiteUrl || '#'}
-                    target={s.websiteUrl ? "_blank" : "_self"}
-                    rel="noreferrer"
-                    className="transition-transform hover:scale-110"
-                    title={s.name}
-                  >
-                    <img
-                      src={s.logoUrl}
-                      alt={s.name}
-                      className={`object-contain ${s.tier === 'Gold' ? 'h-16 md:h-20' :
-                        s.tier === 'Silver' ? 'h-12 md:h-16' :
-                          'h-8 md:h-12'
-                        }`}
-                    />
-                  </a>
-                ))}
+      {/* ── Footer (Teachers & Admin only) ── */}
+      {role === 'teacher' && (
+        <footer className="bg-white border-t border-stone-200 py-8 mt-12">
+          <div className="max-w-7xl mx-auto px-4">
+            {sponsors.length > 0 && (
+              <div className="mb-8 border-b border-stone-100 pb-8">
+                <h3 className="text-center text-sm font-bold text-stone-400 uppercase tracking-widest mb-6">Event Sponsors</h3>
+                <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-80 grayscale hover:grayscale-0 transition-all duration-500">
+                  {sponsors.map(s => (
+                    <a
+                      key={s.id}
+                      href={s.websiteUrl || '#'}
+                      target={s.websiteUrl ? '_blank' : '_self'}
+                      rel="noreferrer"
+                      className="transition-transform hover:scale-110"
+                      title={s.name}
+                    >
+                      <img
+                        src={s.logoUrl}
+                        alt={s.name}
+                        className={`object-contain ${s.tier === 'Gold' ? 'h-16 md:h-20' :
+                          s.tier === 'Silver' ? 'h-12 md:h-16' :
+                            'h-8 md:h-12'
+                          }`}
+                      />
+                    </a>
+                  ))}
+                </div>
               </div>
+            )}
+            <div className="text-center text-stone-400 text-sm">
+              <p>© {new Date().getFullYear()} Colegio Integral El Manglar, Brindando oportunidades de vida a nuestros estudiantes</p>
             </div>
-          )}
-
-          <div className="text-center text-stone-400 text-sm">
-            <p>© {new Date().getFullYear()} Colegio Integral El Manglar , Brindando oportunidades de vida a nuestros estudiantes</p>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
+
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );

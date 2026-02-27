@@ -210,9 +210,10 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
       setScore(s => s + points);
       setMascotMessage("Amazing! You got it right!");
       confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
+        particleCount: 120,
+        spread: 72,
+        origin: { y: 0.6 },
+        colors: ['#F59E0B', '#D97706', '#FFFFFF', '#1C1917'],
       });
       // Add coins logic (e.g. 1 coin per correct answer)
       if (activeStudent) {
@@ -247,30 +248,17 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
     }
   };
 
-  // --- Render Functions ---
-
-  // Mascot Component
-  const Mascot = ({ message, state }: { message: string, state: 'neutral' | 'happy' | 'sad' }) => (
-    <div className="flex items-end gap-3 mb-6 animate-fade-in">
-      <div className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 relative">
-        {/* Replace with actual Bee Image */}
-        <img src="/bee.png" alt="Mascot" className={`w-full h-full object-contain drop-shadow-md ${state === 'happy' ? 'animate-bounce' : state === 'sad' ? 'grayscale opacity-80' : ''}`} />
-      </div>
-      <div className="bg-white border-2 border-stone-200 rounded-2xl rounded-bl-none p-3 shadow-sm relative -top-4 max-w-[200px]">
-        <p className="text-sm font-bold text-stone-700 leading-tight">{message}</p>
-      </div>
-    </div>
-  );
+  // Mascot removed — messages handled inline via feedback state
 
   // Home / Menu Screen
   if (!isPlaying) {
     return (
       <div className="max-w-xl mx-auto bg-white p-8 rounded-2xl border border-stone-200 shadow-sm text-center animate-fade-in relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500"></div>
-        <div className="w-20 h-20 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-lg relative -mt-4">
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 to-amber-600" />
+        <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-lg relative -mt-4">
           <Trophy size={36} />
         </div>
-        <h2 className="text-2xl font-black text-stone-800 mb-2">Ready to Practice?</h2>
+        <h2 className="text-2xl font-black text-stone-900 mb-2">Ready to Practice?</h2>
         <p className="text-stone-500 mb-8">Earn coins, keep your streak, and master your spelling!</p>
 
         {/* Mode Selector */}
@@ -280,30 +268,30 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
             <button
               onClick={() => setPracticeMode('spelling')}
               className={`p-5 rounded-2xl border-2 transition-all group ${practiceMode === 'spelling'
-                ? 'bg-green-50 border-green-500 shadow-md transform scale-[1.02]'
-                : 'bg-white text-stone-600 border-stone-100 hover:border-green-200 hover:bg-green-50/50'
+                  ? 'bg-amber-50 border-amber-500 shadow-md scale-[1.02]'
+                  : 'bg-white text-stone-600 border-stone-100 hover:border-amber-200'
                 }`}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors ${practiceMode === 'spelling' ? 'bg-green-500 text-white' : 'bg-stone-100 text-stone-400 group-hover:bg-green-100 group-hover:text-green-500'
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors ${practiceMode === 'spelling' ? 'bg-amber-500 text-white' : 'bg-stone-100 text-stone-400 group-hover:bg-amber-50 group-hover:text-amber-500'
                 }`}>
                 <Volume2 size={24} />
               </div>
               <div className="font-bold text-stone-800">Spelling Drill</div>
-              <div className="text-xs text-stone-400 mt-1">Listen & Type</div>
+              <div className="text-xs text-stone-400 mt-1">Listen &amp; Type</div>
             </button>
             <button
               onClick={() => setPracticeMode('anagram')}
               className={`p-5 rounded-2xl border-2 transition-all group ${practiceMode === 'anagram'
-                ? 'bg-purple-50 border-purple-500 shadow-md transform scale-[1.02]'
-                : 'bg-white text-stone-600 border-stone-100 hover:border-purple-200 hover:bg-purple-50/50'
+                  ? 'bg-stone-900 border-stone-900 shadow-md scale-[1.02]'
+                  : 'bg-white text-stone-600 border-stone-100 hover:border-stone-300'
                 }`}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors ${practiceMode === 'anagram' ? 'bg-purple-500 text-white' : 'bg-stone-100 text-stone-400 group-hover:bg-purple-100 group-hover:text-purple-500'
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors ${practiceMode === 'anagram' ? 'bg-amber-400 text-stone-900' : 'bg-stone-100 text-stone-400 group-hover:bg-stone-800 group-hover:text-white'
                 }`}>
                 <Shuffle size={24} />
               </div>
-              <div className="font-bold text-stone-800">Anagram Game</div>
-              <div className="text-xs text-stone-400 mt-1">Unscramble</div>
+              <div className={`font-bold ${practiceMode === 'anagram' ? 'text-white' : 'text-stone-800'}`}>Anagram Game</div>
+              <div className={`text-xs mt-1 ${practiceMode === 'anagram' ? 'text-stone-400' : 'text-stone-400'}`}>Unscramble</div>
             </button>
           </div>
         </div>
@@ -322,10 +310,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
         <button
           onClick={startGame}
           disabled={gradeWords.length === 0}
-          className={`w-full py-4 text-white rounded-xl font-bold text-lg shadow-xl shadow-green-200 transition-all hover:-translate-y-1 active:scale-95 disabled:opacity-50 disabled:translate-y-0 ${practiceMode === 'anagram'
-            ? 'bg-purple-600 hover:bg-purple-700'
-            : 'bg-green-600 hover:bg-green-700'
-            }`}
+          className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-stone-900 rounded-2xl font-bold text-lg shadow-lg shadow-amber-100 transition-all hover:-translate-y-1 active:scale-95 disabled:opacity-50 disabled:translate-y-0"
         >
           Start Challenge
         </button>
@@ -333,213 +318,213 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
     );
   }
 
-  // Active Game Screen
+  // Active Game Screen — Zen Layout
   return (
-    <div className="max-w-xl mx-auto">
-      {/* Header Bar */}
-      <div className="flex justify-between items-center mb-6">
+    <div className="max-w-xl mx-auto pb-4">
+
+      {/* ── Zen HUD: single compact row ── */}
+      <div className="flex items-center justify-between mb-5 px-1">
         <button
           onClick={() => setIsPlaying(false)}
-          className="text-stone-400 hover:text-stone-600 font-bold text-sm transition-colors py-2 px-3 hover:bg-stone-100 rounded-lg"
+          className="text-stone-400 hover:text-stone-700 font-semibold text-sm transition-colors py-1.5 px-3 hover:bg-stone-100 rounded-lg"
         >
           ✕ Quit
         </button>
 
-        {/* Lives & Score */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-full shadow-sm border border-stone-100">
+        <div className="flex items-center gap-3">
+          {/* Lives */}
+          <div className="flex items-center gap-0.5">
             {[1, 2, 3].map(i => (
               <div key={i} className="transition-all duration-300">
-                {i <= lives ? (
-                  <Heart size={20} className="fill-red-500 text-red-500" />
-                ) : (
-                  <HeartCrack size={20} className="text-stone-300" />
-                )}
+                {i <= lives
+                  ? <Heart size={18} className="fill-rose-500 text-rose-500" />
+                  : <HeartCrack size={18} className="text-stone-200" />}
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-2 bg-yellow-100 px-3 py-1.5 rounded-full text-yellow-700 font-bold text-sm border border-yellow-200">
-            <Trophy size={16} /> {score}
+          {/* Score */}
+          <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1 rounded-full text-amber-700 font-bold text-sm border border-amber-200">
+            <Trophy size={14} /> {score}
           </div>
         </div>
       </div>
 
-      <Mascot
-        message={mascotMessage}
-        state={gameOver ? 'sad' : feedback === 'correct' ? 'happy' : feedback === 'incorrect' ? 'sad' : 'neutral'}
-      />
-
-      <div className={`bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-stone-100 text-center relative overflow-hidden transition-all duration-300 ${feedback === 'incorrect' ? 'animate-shake border-red-200' : ''}`}>
+      {/* ── Main card ── */}
+      <div className={`bg-white rounded-3xl shadow-lg border transition-all duration-200 relative overflow-hidden
+        ${feedback === 'correct'
+          ? 'border-emerald-400 ring-2 ring-emerald-400'
+          : feedback === 'incorrect'
+            ? 'border-rose-400 ring-2 ring-rose-400 animate-shake'
+            : 'border-stone-100'
+        }`}>
 
         {/* Game Over Overlay */}
         {gameOver && (
-          <div className="absolute inset-0 bg-white/95 z-20 flex flex-col items-center justify-center p-8 animate-fade-in">
-            <HeartCrack size={64} className="text-stone-300 mb-4" />
-            <h2 className="text-3xl font-black text-stone-800 mb-2">Out of Lives!</h2>
-            <p className="text-stone-500 mb-8">You showed great effort. Ready to try again?</p>
-            <div className="bg-stone-50 p-4 rounded-xl w-full mb-8 border border-stone-100">
+          <div className="absolute inset-0 bg-white/96 z-20 flex flex-col items-center justify-center p-8 animate-fade-in">
+            <HeartCrack size={56} className="text-stone-300 mb-4" />
+            <h2 className="text-3xl font-black text-stone-900 mb-2">Out of Lives!</h2>
+            <p className="text-stone-500 mb-8">Great effort. Ready to go again?</p>
+            <div className="bg-stone-50 p-4 rounded-2xl w-full mb-6 border border-stone-100">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-stone-500 font-medium">Final Score</span>
-                <span className="text-xl font-bold text-stone-800">{score}</span>
+                <span className="text-xl font-bold text-stone-900">{score}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-stone-500 font-medium">BeeCoins Earned</span>
-                <span className="text-xl font-bold text-yellow-500">+{Math.floor(score / 15)}</span>
+                <span className="text-xl font-bold text-amber-500">+{Math.floor(score / 15)}</span>
               </div>
             </div>
-            <button onClick={startGame} className="w-full py-4 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-200 transition-all hover:-translate-y-1">
+            <button
+              onClick={startGame}
+              className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-stone-900 rounded-2xl font-bold shadow-lg transition-all hover:-translate-y-1"
+            >
               Try Again
             </button>
           </div>
         )}
 
-        {/* Correct Answer Overlay */}
-        {feedback === 'correct' && (
-          <div className="absolute inset-0 bg-green-500/5 flex items-center justify-center z-0 pointer-events-none"></div>
-        )}
-
-        <div className="relative z-10">
-          <button
-            onClick={() => currentWord && speak(currentWord.audioUrl)}
-            disabled={gameOver}
-            className="w-24 h-24 bg-gradient-to-br from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 text-stone-800 rounded-full flex items-center justify-center mx-auto mb-6 transition-all shadow-sm border-4 border-white active:scale-95"
-          >
-            <Volume2 size={40} className="text-yellow-600" />
-          </button>
-
-          <p className="text-stone-400 text-xs font-bold uppercase tracking-wider mb-6">Tap to Listen</p>
+        <div className="p-5 sm:p-7">
+          {/* ── Audio button (large, centered) ── */}
+          <div className="flex flex-col items-center mb-6">
+            <button
+              onClick={() => currentWord && speak(currentWord.audioUrl)}
+              disabled={gameOver}
+              className="w-24 h-24 bg-stone-900 hover:bg-stone-800 text-amber-400 rounded-full flex items-center justify-center mx-auto transition-all shadow-lg active:scale-95 border-4 border-white ring-2 ring-stone-800/10"
+            >
+              <Volume2 size={38} />
+            </button>
+            <p className="text-stone-400 text-[11px] font-bold uppercase tracking-widest mt-3">Tap to Listen</p>
+          </div>
 
           {feedback === 'none' ? (
             <form onSubmit={checkSpelling}>
               {practiceMode === 'anagram' ? (
                 <>
-                  {/* Letras disponibles (mezcladas) */}
-                  <div className="mb-6">
-                    <div className="flex flex-wrap justify-center gap-2 min-h-[60px] p-4 bg-stone-50 rounded-xl border border-stone-200 border-dashed">
+                  {/* Available Scrabble tiles */}
+                  <div className="mb-5">
+                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 text-center">Available</p>
+                    <div className="flex flex-wrap justify-center gap-2 min-h-[56px] p-3 bg-amber-50/60 rounded-2xl border border-amber-100">
                       {shuffledLetters.length === 0 ? (
-                        <div className="h-10 flex items-center"><p className="text-stone-300 text-sm font-medium">Empty</p></div>
+                        <div className="h-10 flex items-center">
+                          <p className="text-stone-300 text-sm font-medium">—</p>
+                        </div>
                       ) : (
                         shuffledLetters.map((letter, index) => (
                           <button
                             key={`${letter}-${index}`}
                             type="button"
                             onClick={() => handleLetterClick(letter, index)}
-                            className="w-12 h-12 bg-white border-b-4 border-stone-200 rounded-lg font-bold text-xl text-stone-700 hover:border-purple-400 hover:text-purple-600 hover:-translate-y-1 transition-all active:translate-y-0 active:border-b-0"
+                            className="w-11 h-11 bg-stone-50 border border-stone-200 border-b-[3px] border-b-stone-300 rounded-lg font-black text-lg text-stone-800 shadow-sm hover:border-b-amber-400 hover:bg-white hover:-translate-y-1 transition-all active:translate-y-0 active:border-b active:shadow-none select-none"
                           >
-                            {letter}
+                            {letter.toUpperCase()}
                           </button>
                         ))
                       )}
                     </div>
                   </div>
 
-                  {/* Letras seleccionadas (respuesta del estudiante) */}
-                  <div className="mb-8">
-                    <p className="text-xs font-bold text-stone-400 uppercase mb-3">Your Answer</p>
-                    <div className="flex flex-wrap justify-center gap-2 min-h-[60px] p-2">
+                  {/* Selected tiles (student answer) */}
+                  <div className="mb-6">
+                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 text-center">Your Answer</p>
+                    <div className="flex flex-wrap justify-center gap-2 min-h-[56px] p-3 rounded-2xl border-2 border-dashed border-stone-200">
                       {selectedLetters.map((letter, index) => (
                         <button
-                          key={`selected-${index}`}
+                          key={`sel-${index}`}
                           type="button"
                           onClick={() => handleRemoveLetter(index)}
-                          className="w-12 h-12 bg-purple-500 text-white border-b-4 border-purple-700 rounded-lg font-bold text-xl hover:bg-purple-600 transition-all active:translate-y-1 active:border-b-0"
+                          className="w-11 h-11 bg-stone-900 text-amber-400 border-b-[3px] border-b-stone-700 rounded-lg font-black text-lg shadow-md hover:bg-stone-800 transition-all active:translate-y-0.5 active:border-b active:shadow-none select-none"
                         >
-                          {letter}
+                          {letter.toUpperCase()}
                         </button>
                       ))}
                       {selectedLetters.length === 0 && (
-                        <div className="w-full text-center py-4 border-b-2 border-stone-100 text-stone-300 italic">
-                          Select letters...
+                        <div className="w-full text-center py-3 text-stone-300 text-sm italic">
+                          Tap letters above…
                         </div>
                       )}
                     </div>
-                    {selectedLetters.length > 0 && (
-                      <div className="mt-4 text-center">
-                        <span className="text-3xl md:text-4xl font-black text-purple-600 tracking-widest break-all">
-                          {userInput}
-                        </span>
-                      </div>
-                    )}
                   </div>
-
-                  {/* Hidden input for typing fallback support in anagram if desired, OR just reliance on buttons. 
-                      Keeping simple for now: Anagram is click-only to prevent confusion, 
-                      or we can keep the helper input but hide it better. 
-                      Let's stick to the button-only interface for anagram as it is clearer.
-                  */}
                 </>
               ) : (
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  placeholder="Type here..."
-                  className="w-full text-center text-4xl font-black text-stone-800 placeholder:text-stone-300 border-none focus:outline-none mb-8 bg-transparent tracking-widest"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck="false"
-                />
+                /* Spelling input — text-[16px] to prevent iOS auto-zoom */
+                <div className={`relative mb-6 transition-all`}>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    placeholder="Type here…"
+                    className={`w-full text-center text-[18px] font-black text-stone-900 placeholder:text-stone-300
+                      border-2 rounded-2xl py-4 px-4 focus:outline-none bg-stone-50 tracking-widest
+                      transition-all duration-150
+                      ${feedback === 'correct'
+                        ? 'border-emerald-400 ring-2 ring-emerald-400/30 bg-emerald-50'
+                        : feedback === 'incorrect'
+                          ? 'border-rose-400 ring-2 ring-rose-400/30 bg-rose-50'
+                          : 'border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
+                      }`}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    autoCapitalize="none"
+                  />
+                </div>
               )}
 
               <button
                 type="submit"
                 disabled={!userInput.trim()}
-                className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-1 active:translate-y-0 active:shadow-none ${practiceMode === 'anagram'
-                  ? 'bg-purple-500 hover:bg-purple-600 text-white shadow-purple-200'
-                  : 'bg-green-500 hover:bg-green-600 text-white shadow-green-200'
-                  }`}
+                className="w-full py-4 bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-stone-900 rounded-2xl font-bold shadow-md shadow-amber-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Check Answer
               </button>
             </form>
           ) : (
-            <div className="animate-slide-up">
-              <div className="mb-6">
-                {feedback === 'correct' ? (
-                  <div className="flex flex-col items-center text-green-500">
-                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-2">
-                      <CheckCircle size={32} />
-                    </div>
-                    <h3 className="text-2xl font-black">Correct!</h3>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center text-red-500">
-                    <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-2">
-                      <XCircle size={32} />
-                    </div>
-                    <h3 className="text-2xl font-black">Incorrect</h3>
-                    <p className="text-stone-600 mt-2">
-                      Correct: <span className="font-bold text-stone-900 bg-yellow-100 px-2 py-0.5 rounded">{currentWord?.word}</span>
-                    </p>
-                  </div>
+            <div className="animate-fade-in">
+              {/* Feedback banner */}
+              <div className={`flex flex-col items-center mb-5 ${feedback === 'correct' ? 'text-emerald-600' : 'text-rose-600'
+                }`}>
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-2 ${feedback === 'correct' ? 'bg-emerald-100' : 'bg-rose-50'
+                  }`}>
+                  {feedback === 'correct'
+                    ? <CheckCircle size={30} />
+                    : <XCircle size={30} />}
+                </div>
+                <h3 className="text-2xl font-black">
+                  {feedback === 'correct' ? 'Correct! +15 pts' : 'Incorrect'}
+                </h3>
+                {feedback === 'incorrect' && (
+                  <p className="text-stone-600 text-sm mt-1">
+                    Correct: <span className="font-bold text-stone-900 bg-amber-100 px-2 py-0.5 rounded">{currentWord?.word}</span>
+                  </p>
                 )}
               </div>
 
-              <div className="bg-stone-50 p-4 rounded-xl text-left mb-6 text-sm text-stone-600 border border-stone-100 flex gap-4 items-start">
+              {/* Word info card */}
+              <div className="bg-stone-50 p-4 rounded-2xl text-left mb-5 text-sm text-stone-600 border border-stone-100 flex gap-4 items-start">
                 {currentWord?.image && (
-                  <div className="w-20 h-20 rounded-lg bg-white border border-stone-200 overflow-hidden flex-shrink-0">
+                  <div className="w-16 h-16 rounded-xl bg-white border border-stone-200 overflow-hidden flex-shrink-0">
                     <img src={currentWord.image} className="w-full h-full object-cover" alt="Word" />
                   </div>
                 )}
                 <div className="flex-1">
-                  <div className="flex gap-2 mb-1">
-                    <p className="inline-block px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full uppercase">
+                  <div className="flex gap-2 mb-1 flex-wrap">
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full uppercase">
                       {currentWord?.partOfSpeech || 'noun'}
-                    </p>
+                    </span>
                     {currentWord?.theme && (
-                      <p className="inline-block px-2 py-0.5 bg-stone-100 text-stone-600 text-xs font-medium rounded-full border border-stone-200">
+                      <span className="px-2 py-0.5 bg-stone-100 text-stone-600 text-[10px] font-medium rounded-full border border-stone-200">
                         {currentWord.theme}
-                      </p>
+                      </span>
                     )}
                   </div>
-                  <p><span className="font-bold text-stone-700">Definition:</span> {currentWord?.definition}</p>
+                  <p className="text-stone-700 leading-snug"><span className="font-bold">Definition:</span> {currentWord?.definition}</p>
                 </div>
               </div>
 
               <button
                 onClick={nextWord}
-                className="w-full py-4 bg-stone-800 hover:bg-stone-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:-translate-y-1"
+                className="w-full py-4 bg-stone-900 hover:bg-stone-800 active:scale-[0.98] text-amber-400 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg"
               >
                 Next Word <ChevronRight size={18} />
               </button>

@@ -1,0 +1,158 @@
+/* ============================================================
+   Premium Hive – index.css
+   Global supplemental styles for the Spelling Bee Manager.
+   Typography, pattern, and scrollbar overrides.
+   ============================================================ */
+
+/* Ensure headings always use Playfair Display */
+h1,
+h2,
+h3,
+.font-serif-title {
+  font-family: 'Playfair Display', ui-serif, Georgia, serif;
+}
+
+/* Body text uses Inter */
+body,
+p,
+span,
+button,
+input,
+label,
+td,
+th {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Custom scrollbar – stone palette */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f5f5f4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a29e;
+}
+
+/* Smooth behaviour */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Honeycomb pattern utility class */
+.honeycomb-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.honeycomb-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66zM28 98L0 82V50L28 34l28 16v32L28 98z' fill='none' stroke='%23000000' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-size: 56px 100px;
+  opacity: 0.045;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.honeycomb-bg>* {
+  position: relative;
+  z-index: 1;
+}
+
+/* Animation utilities (used alongside Tailwind CDN) */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceSlow {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out both;
+}
+
+.animate-bounce-slow {
+  animation: bounceSlow 3s ease-in-out infinite;
+}
+
+/* Shake animation for incorrect answers */
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  15% {
+    transform: translateX(-6px);
+  }
+
+  30% {
+    transform: translateX(6px);
+  }
+
+  45% {
+    transform: translateX(-4px);
+  }
+
+  60% {
+    transform: translateX(4px);
+  }
+
+  75% {
+    transform: translateX(-2px);
+  }
+
+  90% {
+    transform: translateX(2px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.45s ease-in-out;
+}
+
+/* Slide up and fade in for Toast notifications */
+@keyframes slideUpFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up-fade-in {
+  animation: slideUpFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

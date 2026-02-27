@@ -258,33 +258,33 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
     if (loading) return <div className="p-8 text-center">Loading school data...</div>;
 
     return (
-        <div className="min-h-screen bg-orange-50/30 font-sans">
+        <div className="min-h-screen bg-stone-50 font-sans">
             <LoadingOverlay isLoading={submitting} text="Processing..." />
 
-            {/* Header */}
-            <nav className="bg-white border-b border-stone-200 sticky top-0 z-50">
+            {/* Premium Header bg-stone-900 */}
+            <nav className="bg-stone-900 text-white border-b border-stone-800 sticky top-0 z-50 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg bg-stone-100 flex items-center justify-center border border-stone-200 overflow-hidden">
+                            <div className="w-12 h-12 rounded-lg bg-stone-800 flex items-center justify-center border border-stone-700 overflow-hidden shadow-inner">
                                 {school.logo ? (
-                                    <img src={school.logo} alt="Logo" className="w-full h-full object-contain" />
+                                    <img src={school.logo} alt="Logo" className="w-full h-full object-contain p-1" />
                                 ) : (
                                     <Users size={24} className="text-stone-400" />
                                 )}
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-stone-800 leading-tight">
+                                <h1 className="text-xl sm:text-2xl font-black text-white leading-tight font-serif tracking-wide">
                                     {school.name}
                                 </h1>
-                                <p className="text-xs text-stone-500 font-bold uppercase tracking-widest mt-0.5">Invited School Portal</p>
+                                <p className="text-[10px] text-amber-400 font-bold uppercase tracking-[0.2em] mt-0.5">Invited School Portal</p>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-4">
                             <button
                                 onClick={onLogout}
-                                className="px-4 py-2 text-stone-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2 font-medium text-sm"
+                                className="px-3 py-2 text-stone-400 hover:text-rose-400 hover:bg-stone-800 rounded-lg transition-colors flex items-center gap-2 font-medium text-sm"
                                 title="Logout"
                             >
                                 <LogOut size={18} />
@@ -295,48 +295,74 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                 </div>
             </nav>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+                {/* Delegation Summary Metrics */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Registered</span>
+                            <Users size={16} className="text-amber-500" />
+                        </div>
+                        <div className="flex items-end gap-2">
+                            <span className="text-3xl font-black text-stone-900 leading-none">{students.length}</span>
+                            <span className="text-xs font-semibold text-stone-500 mb-1">Students</span>
+                        </div>
+                    </div>
+                    <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Docs Limit</span>
+                            <FileText size={16} className="text-amber-500" />
+                        </div>
+                        <div className="flex items-end gap-2">
+                            <span className="text-3xl font-black text-stone-900 leading-none">{resources.length}</span>
+                            <span className="text-xs font-semibold text-stone-500 mb-1">Files</span>
+                        </div>
+                    </div>
+                    <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col col-span-2 md:col-span-2 overflow-hidden relative">
+                        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Trophy size={80} /></div>
+                        <div className="relative z-10 flex flex-col h-full justify-center">
+                            <h3 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Welcome to the 4th Interschool Spelling Bee</h3>
+                            <p className="text-sm text-stone-600 font-medium mb-3">Register your students to compete in this edition.</p>
+                            <button
+                                onClick={() => setActiveTab('registration')}
+                                className="w-fit px-4 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+                            >
+                                Go to Registration
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 {/* Enhanced Sponsor Display (Always Visible) */}
-                <div className="mb-10 animate-fade-in">
+                <div className="mb-8 animate-fade-in">
                     <SponsorGrid />
                 </div>
 
-                {/* Tabs */}
-                <div className="mb-8">
-                    {/* Contenedor de Tabs - Grid en móvil, Flex en desktop */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap md:justify-center gap-2 p-1 bg-stone-100/50 backdrop-blur-sm rounded-xl border border-stone-200/60">
+                {/* Pill Tabs for Navigation */}
+                <div className="mb-8 overflow-x-auto pb-2 scrollbar-none">
+                    <div className="flex items-center gap-2 min-w-max">
                         {[
-                            { id: 'delegation', label: 'Delegation', icon: Users, desc: 'Your team' },
-                            { id: 'registration', label: 'Register', icon: CheckCircle, desc: 'New student' },
-                            { id: 'payments', label: 'Payments', icon: DollarSign, desc: 'History' },
-                            { id: 'docs', label: 'Docs', icon: FileText, desc: 'Resources' },
-                            { id: 'market', label: 'Market', icon: Store, desc: 'Vendors' },
-                            { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, desc: 'Rankings' },
+                            { id: 'delegation', label: 'Delegation', icon: Users },
+                            { id: 'registration', label: 'Register', icon: CheckCircle },
+                            { id: 'payments', label: 'Payments', icon: DollarSign },
+                            { id: 'docs', label: 'Resources', icon: FileText },
+                            { id: 'market', label: 'Market', icon: Store },
+                            { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
                         ].map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
                                 className={`
-                                    relative flex flex-col items-center justify-center gap-1.5 p-3 sm:px-6 sm:py-3.5 
-                                    rounded-lg text-sm font-bold transition-all duration-200 outline-none
+                                    flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap outline-none border
                                     ${activeTab === tab.id
-                                        ? 'bg-white text-blue-600 shadow-sm border border-stone-200/50 scale-[1.02] ring-1 ring-black/5'
-                                        : 'text-stone-500 hover:text-stone-700 hover:bg-white/60 border border-transparent'
+                                        ? 'bg-stone-900 text-amber-400 border-stone-900 shadow-md transform scale-[1.02]'
+                                        : 'bg-transparent text-stone-500 border-stone-200 hover:bg-stone-100 hover:text-stone-800'
                                     }
-                                    ${tab.id === 'market' || tab.id === 'leaderboard' ? 'col-span-1 sm:col-span-1' : ''} 
                                 `}
                             >
-                                <tab.icon size={20} className={`transition-transform duration-200 ${activeTab === tab.id ? 'scale-110' : ''}`} />
-                                <div className="text-center">
-                                    <span className="block">{tab.label}</span>
-                                    <span className={`text-[10px] sm:text-xs font-medium mt-0.5 hidden sm:block ${activeTab === tab.id ? 'text-blue-400' : 'text-stone-400'}`}>
-                                        {tab.desc}
-                                    </span>
-                                </div>
-                                {activeTab === tab.id && (
-                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-blue-500 rounded-full md:hidden"></div>
-                                )}
+                                <tab.icon size={16} />
+                                {tab.label}
                             </button>
                         ))}
                     </div>
@@ -345,50 +371,59 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                 {/* Content */}
                 {activeTab === 'delegation' && (
                     <div className="space-y-6 animate-fade-in">
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-stone-200 shadow-sm">
                             <h2 className="text-xl font-bold text-stone-800">Your Delegation</h2>
-                            <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
-                                {students.length} Students
+                            <div className="bg-amber-100 text-amber-800 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">
+                                {students.length} Registered
                             </div>
                         </div>
 
                         {students.length === 0 ? (
-                            <div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-stone-200">
-                                <Users size={48} className="mx-auto text-stone-300 mb-4" />
-                                <p className="text-stone-500 text-lg font-medium">No students registered yet.</p>
+                            <div className="text-center py-20 bg-white rounded-3xl border border-stone-200 shadow-sm max-w-2xl mx-auto">
+                                <Users size={56} className="mx-auto text-stone-300 mb-5" />
+                                <p className="text-stone-900 text-xl font-black mb-2">No students registered yet</p>
+                                <p className="text-stone-500 text-sm font-medium mb-8">Start building your elite delegation right now.</p>
                                 <button
                                     onClick={() => setActiveTab('registration')}
-                                    className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold shadow-sm"
+                                    className="px-8 py-4 bg-amber-500 text-stone-900 rounded-xl hover:bg-amber-600 transition-colors font-bold shadow-md shadow-amber-100"
                                 >
-                                    Register your first student
+                                    Register First Student
                                 </button>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                                 {students.map(student => (
-                                    <div key={student.id} className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden flex flex-col group">
-                                        <div className="aspect-square bg-stone-100 relative overflow-hidden">
+                                    <div key={student.id} className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sm:p-5 flex flex-col group relative overflow-hidden transition-all hover:shadow-md hover:border-amber-200">
+                                        <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-full bg-stone-100 ring-4 ring-stone-50 overflow-hidden mb-4 shrink-0 relative">
                                             {student.photo ? (
                                                 <img src={student.photo} alt={student.firstName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-stone-300">
-                                                    <Users size={48} />
+                                                <div className="w-full h-full flex items-center justify-center text-stone-300 font-bold text-2xl">
+                                                    {student.firstName[0]}
                                                 </div>
                                             )}
-                                            <button
-                                                onClick={() => handleStudentDelete(student.id)}
-                                                className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-red-50 text-stone-500 hover:text-red-500 rounded-full transition-colors backdrop-blur-sm opacity-0 group-hover:opacity-100"
-                                                title="Remove student"
-                                            >
-                                                <XCircle size={20} />
-                                            </button>
                                         </div>
-                                        <div className="p-4 flex-1">
-                                            <h3 className="font-bold text-lg text-stone-800 truncate">{student.firstName} {student.lastName}</h3>
-                                            <p className="text-stone-500 text-sm font-medium">{getGradeLabel(student.grade)}</p>
-                                            <div className="mt-4 pt-4 border-t border-stone-100 flex items-center gap-2 text-sm text-green-600 font-bold">
-                                                <CheckCircle size={16} />
-                                                <span>Registered</span>
+
+                                        <button
+                                            onClick={() => handleStudentDelete(student.id)}
+                                            className="absolute top-3 right-3 p-1.5 bg-stone-100 hover:bg-rose-100 text-stone-400 hover:text-rose-500 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                                            title="Remove student"
+                                        >
+                                            <XCircle size={16} />
+                                        </button>
+
+                                        <div className="text-center flex-1 flex flex-col">
+                                            <h3 className="font-bold text-base sm:text-lg text-stone-900 leading-tight mb-2 truncate">
+                                                {student.firstName} {student.lastName}
+                                            </h3>
+                                            <div className="flex justify-center mb-4">
+                                                <span className="bg-stone-100 text-stone-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+                                                    {getGradeLabel(student.grade)}
+                                                </span>
+                                            </div>
+                                            <div className="mt-auto pt-3 border-t border-stone-100 flex items-center justify-center gap-1.5 text-xs text-emerald-600 font-bold">
+                                                <CheckCircle size={14} />
+                                                <span>Active</span>
                                             </div>
                                         </div>
                                     </div>
@@ -480,7 +515,7 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                                     <button
                                         type="submit"
                                         disabled={submitting}
-                                        className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.98]"
+                                        className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-stone-900 bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.98]"
                                     >
                                         {submitting ? 'Registering...' : 'Register Student'}
                                     </button>
@@ -658,14 +693,21 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                             </div>
                         )}
 
-                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mt-8">
-                            <h3 className="text-lg font-bold text-blue-900 mb-2">Need Help?</h3>
-                            <p className="text-blue-700 text-sm mb-4">
-                                If you have any questions about the registration process or the event details, please contact the event coordinator.
-                            </p>
-                            <div className="font-medium text-blue-800">
-                                elementaryenglish.elmanglar@gmail.com <br />
-                                +58 412-185-7248
+                        <div className="bg-stone-900 rounded-2xl p-6 mt-8 relative overflow-hidden text-center sm:text-left">
+                            <div className="absolute -right-4 -bottom-4 opacity-5 pointer-events-none">
+                                <MessageSquare size={120} />
+                            </div>
+                            <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+                                <div>
+                                    <h3 className="text-lg font-bold text-amber-400 mb-1">Need Help?</h3>
+                                    <p className="text-stone-400 text-sm mb-4 max-w-sm">
+                                        If you have any questions about the registration process or the event details, please contact the event coordinator.
+                                    </p>
+                                    <div className="font-bold text-white text-sm">
+                                        elementaryenglish.elmanglar@gmail.com <br />
+                                        <span className="text-amber-500">+58 412-185-7248</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

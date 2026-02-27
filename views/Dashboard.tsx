@@ -186,11 +186,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
   }, [sessions]);
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <header className="mb-8 relative bg-white p-8 rounded-3xl border border-stone-200 shadow-sm overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div className="space-y-8 animate-fade-in pb-12">
+      <header className="mb-8 relative bg-white p-8 rounded-3xl border border-stone-200 shadow-xl overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="relative z-10 max-w-lg">
-          <h2 className="text-4xl font-black text-stone-800 mb-2">Contest Overview</h2>
-          <p className="text-stone-500 text-lg">Welcome back, Teacher! Your spelling bee headquarters is ready.</p>
+          <h2 className="text-4xl font-black text-stone-900 mb-2 font-serif tracking-tight">Contest Overview</h2>
+          <p className="text-stone-500 text-lg font-medium">Welcome back, Administrator. Your headquarters is ready.</p>
         </div>
 
         {beeImageUrl && (
@@ -202,43 +202,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300">
-          <div className="p-4 bg-yellow-100 text-yellow-700 rounded-xl">
+        <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300 group">
+          <div className="p-4 bg-stone-50 text-stone-400 group-hover:text-amber-500 group-hover:bg-amber-50 rounded-xl transition-colors">
             <BookOpen size={32} />
           </div>
           <div>
-            <p className="text-stone-500 text-sm font-medium">Total Words</p>
-            <p className="text-3xl font-bold text-stone-900">{totalWords}</p>
+            <p className="text-stone-400 text-[10px] uppercase tracking-widest font-bold">Total Words</p>
+            <p className="text-4xl font-black text-stone-900 font-serif">{totalWords}</p>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300">
-          <div className="p-4 bg-orange-100 text-orange-600 rounded-xl">
+        <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300 group">
+          <div className="p-4 bg-stone-50 text-stone-400 group-hover:text-amber-500 group-hover:bg-amber-50 rounded-xl transition-colors">
             <Trophy size={32} />
           </div>
           <div>
-            <p className="text-stone-500 text-sm font-medium">Contest Ready</p>
-            <p className="text-3xl font-bold text-stone-900">{totalWords > 20 ? 'Yes' : 'Not Yet'}</p>
+            <p className="text-stone-400 text-[10px] uppercase tracking-widest font-bold">Contest Ready</p>
+            <p className="text-3xl font-black text-stone-900 font-serif leading-tight mt-1">{totalWords > 20 ? 'Yes' : 'No'}</p>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300">
-          <div className="p-4 bg-green-100 text-green-600 rounded-xl">
+        <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300 group">
+          <div className="p-4 bg-stone-50 text-stone-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 rounded-xl transition-colors">
             <TrendingUp size={32} />
           </div>
           <div>
-            <p className="text-stone-500 text-sm font-medium">Nouns</p>
-            <p className="text-3xl font-bold text-stone-900">{nounsCount}</p>
+            <p className="text-stone-400 text-[10px] uppercase tracking-widest font-bold">Nouns</p>
+            <p className="text-4xl font-black text-stone-900 font-serif">{nounsCount}</p>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300">
-          <div className="p-4 bg-red-100 text-red-600 rounded-xl">
+        <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300 group">
+          <div className="p-4 bg-stone-50 text-stone-400 group-hover:text-rose-500 group-hover:bg-rose-50 rounded-xl transition-colors">
             <Users size={32} />
           </div>
           <div>
-            <p className="text-stone-500 text-sm font-medium">Verbs & Adjs</p>
-            <p className="text-3xl font-bold text-stone-900">{verbsCount + adjectivesCount}</p>
+            <p className="text-stone-400 text-[10px] uppercase tracking-widest font-bold">Verb / Adj</p>
+            <p className="text-4xl font-black text-stone-900 font-serif">{verbsCount + adjectivesCount}</p>
           </div>
         </div>
       </div>
@@ -246,8 +246,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Word Distribution by Grade */}
-        <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm">
-          <h3 className="text-lg font-bold text-stone-800 mb-6">Word Distribution by Grade</h3>
+        <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm">
+          <h3 className="text-lg font-bold text-stone-900 mb-6 font-serif">Word Distribution by Grade</h3>
           <div className="h-64 w-full min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%" minWidth={300}>
               <BarChart data={gradeData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
@@ -420,21 +420,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Most Failed Words */}
           {mostFailedWords.length > 0 && (
-            <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm">
-              <h3 className="text-lg font-bold text-stone-800 mb-4 flex items-center gap-2">
-                <Trophy size={20} className="text-red-500" />
+            <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm">
+              <h3 className="text-lg font-bold text-stone-900 mb-4 flex items-center gap-2 font-serif">
+                <Trophy size={20} className="text-rose-500" />
                 Most Challenging Words
               </h3>
               <div className="space-y-2">
                 {mostFailedWords.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-stone-50 rounded-lg hover:bg-stone-100 transition-colors">
+                  <div key={idx} className="flex items-center justify-between p-3 bg-white border border-stone-100 rounded-xl hover:border-stone-300 hover:shadow-sm transition-all group">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-red-100 text-red-700 rounded-full flex items-center justify-center font-bold text-sm">
+                      <div className="w-8 h-8 bg-stone-50 text-stone-400 group-hover:bg-rose-50 group-hover:text-rose-600 rounded-full flex items-center justify-center font-bold text-sm transition-colors border border-stone-200">
                         {item.rank}
                       </div>
                       <div>
-                        <p className="font-bold text-stone-800">{item.word}</p>
-                        <p className="text-xs text-stone-500">{item.failures} failures out of {item.attempts} attempts</p>
+                        <p className="font-bold text-stone-900">{item.word}</p>
+                        <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">{item.failures} failures</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -479,33 +479,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
       )}
 
       {/* Action Buttons */}
-      <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
+      <div className="flex gap-4 mb-4 overflow-x-auto pb-4 scrollbar-hide">
         <button
           onClick={() => onChangeView('manage')}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 font-bold"
+          className="flex-shrink-0 flex items-center gap-2 px-6 py-4 bg-stone-900 text-white rounded-2xl shadow-md hover:shadow-xl hover:bg-stone-800 transition-all font-bold"
         >
-          <Database size={20} />
+          <Database size={20} className="text-amber-500" />
           Manage Word Lists
         </button>
         <button
           onClick={() => onChangeView('session')}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-stone-900 rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 font-bold"
+          className="flex-shrink-0 flex items-center gap-2 px-6 py-4 bg-amber-500 text-stone-900 rounded-2xl shadow-md hover:shadow-xl hover:bg-amber-400 transition-all font-bold"
         >
           <Play size={20} />
           Start Live Session
         </button>
         <button
           onClick={() => onChangeView('manage-sponsors')}
-          className="flex items-center gap-2 px-6 py-3 bg-white border border-stone-200 text-stone-700 rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 font-bold"
+          className="flex-shrink-0 flex items-center gap-2 px-6 py-4 bg-white border border-stone-200 text-stone-700 rounded-2xl shadow-sm hover:shadow-md transition-all font-bold hover:border-amber-500"
         >
-          <Award size={20} className="text-yellow-500" />
+          <Award size={20} className="text-amber-500" />
           Sponsors
         </button>
         <button
           onClick={() => onChangeView('manage-vendors')}
-          className="flex items-center gap-2 px-6 py-3 bg-white border border-stone-200 text-stone-700 rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 font-bold"
+          className="flex-shrink-0 flex items-center gap-2 px-6 py-4 bg-white border border-stone-200 text-stone-700 rounded-2xl shadow-sm hover:shadow-md transition-all font-bold hover:border-stone-400"
         >
-          <Store size={20} className="text-purple-500" />
+          <Store size={20} className="text-stone-400" />
           Vendors
         </button>
       </div>

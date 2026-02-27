@@ -3,7 +3,7 @@ import { School, StudentProfile, Payment, SchoolResource, GradeLevel } from '../
 import { fetchSchools, addSchool, updateSchool, deleteSchool, fetchStudents, fetchPayments, updatePayment, fetchSchoolResources, addSchoolResource, deleteSchoolResource } from '../services/supabaseData';
 import { useToast } from '../lib/toastContext';
 import { LoadingOverlay } from '../components/LoadingSpinner';
-import { Plus, School as SchoolIcon, Users, ChevronRight, UserCheck, Trash2, Edit2, DollarSign, Upload, Image as ImageIcon, CheckCircle, XCircle, Clock, FileText } from 'lucide-react';
+import { Plus, School as SchoolIcon, Users, ChevronRight, UserCheck, Trash2, Edit2, DollarSign, Upload, Image as ImageIcon, CheckCircle, XCircle, Clock, FileText, Trophy } from 'lucide-react';
 
 export const InterschoolManager: React.FC = () => {
     const { showToast } = useToast();
@@ -529,46 +529,75 @@ export const InterschoolManager: React.FC = () => {
             )}
 
             {activeView === 'edition4' && (
-                <div className="space-y-6">
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-                        <h3 className="text-xl font-bold text-yellow-900 mb-2">Edition IV Overview</h3>
-                        <p className="text-yellow-800">
-                            Total Participating Schools: <span className="font-bold">{schools.length}</span> <br />
-                            Total Registered Students: <span className="font-bold">{students.filter(s => !!s.schoolId || schools.some(sc => sc.name === s.school)).length}</span>
-                        </p>
+                <div className="space-y-8 animate-fade-in">
+                    {/* Premium General Overview Card */}
+                    <div className="bg-white rounded-3xl p-8 border border-stone-200 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        {/* Decorative Background Icon */}
+                        <div className="absolute -right-6 -top-10 text-stone-100 rotate-12 pointer-events-none">
+                            <Trophy size={200} strokeWidth={1} />
+                        </div>
+
+                        <div className="relative z-10 space-y-2">
+                            <span className="text-amber-500 font-bold tracking-widest text-[10px] uppercase">Edition IV</span>
+                            <h3 className="text-3xl font-black text-stone-900 font-serif tracking-tight">Contest Overview</h3>
+                            <p className="text-stone-500 font-medium font-sans">Official statistics and delegation rosters.</p>
+                        </div>
+
+                        <div className="relative z-10 flex gap-4 w-full md:w-auto">
+                            <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 flex-1 md:w-40 flex flex-col items-center justify-center shadow-sm">
+                                <span className="text-3xl font-black text-stone-900 font-serif mb-1">{schools.length}</span>
+                                <span className="text-xs font-bold text-stone-400 uppercase tracking-widest text-center">Invited Schools</span>
+                            </div>
+                            <div className="bg-stone-900 border border-stone-800 rounded-2xl p-4 flex-1 md:w-40 flex flex-col items-center justify-center shadow-md">
+                                <span className="text-3xl font-black text-amber-500 font-serif mb-1">
+                                    {students.filter(s => !!s.schoolId || schools.some(sc => sc.name === s.school)).length}
+                                </span>
+                                <span className="text-xs font-bold text-stone-400 uppercase tracking-widest text-center">Registered Students</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="bg-white border-2 border-stone-100 rounded-xl overflow-hidden">
-                        <div className="bg-stone-50 px-6 py-4 border-b border-stone-200 font-bold text-stone-700 flex justify-between">
-                            <span>Registered Delegations (By Grade)</span>
+                    {/* Registered Delegations Container */}
+                    <div className="bg-white border rounded-3xl overflow-hidden shadow-sm border-stone-200/80">
+                        <div className="bg-stone-50 px-8 py-5 border-b border-stone-200 flex justify-between items-center">
+                            <span className="font-bold text-stone-800 text-lg">Registered Delegations</span>
+                            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-stone-200 shadow-sm">Organized By Grade</span>
                         </div>
-                        <div className="p-6">
+
+                        <div className="p-8">
                             {/* Group by Grade */}
                             {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(grade => {
                                 const gradeStudents = students.filter(s => s.grade === grade && (!!s.schoolId || schools.some(sc => sc.name === s.school)));
                                 if (gradeStudents.length === 0) return null;
                                 return (
-                                    <div key={grade} className="mb-6 last:mb-0">
-                                        <h4 className="font-bold text-stone-800 mb-3 flex items-center gap-2">
-                                            <span className="w-6 h-6 bg-stone-800 text-yellow-400 rounded flex items-center justify-center text-xs">
+                                    <div key={grade} className="mb-10 last:mb-0">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="w-10 h-10 bg-stone-900 text-amber-500 rounded-xl flex items-center justify-center text-sm font-black shadow-md border border-stone-800">
                                                 {grade === 12 ? 'G3' : `G${grade}`}
-                                            </span>
-                                            <span>{grade === 12 ? 'Group 3' : `Grade ${grade}`}</span>
-                                            <span className="text-stone-400 text-sm font-normal">({gradeStudents.length} students)</span>
-                                        </h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-stone-900 text-lg leading-tight">{grade === 12 ? 'Group 3' : `Grade ${grade}`}</h4>
+                                                <p className="text-stone-400 text-xs font-bold uppercase tracking-wider">{gradeStudents.length} Students active</p>
+                                            </div>
+                                            <div className="flex-1 h-px bg-stone-100 ml-4"></div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                             {gradeStudents.map(student => (
-                                                <div key={student.id} className="flex items-center gap-3 p-3 border border-stone-100 rounded-lg hover:border-yellow-400 transition-colors">
+                                                <div key={student.id} className="group flex items-center gap-3 p-3 bg-white border border-stone-200 rounded-2xl hover:border-amber-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
                                                     {student.photo ? (
-                                                        <img src={student.photo} alt="" className="w-10 h-10 rounded-full object-cover" />
+                                                        <img src={student.photo} alt="" className="w-12 h-12 rounded-xl object-cover shadow-sm bg-stone-100" />
                                                     ) : (
-                                                        <div className="w-10 h-10 bg-stone-100 rounded-full flex items-center justify-center text-stone-400">
-                                                            <UserCheck size={16} />
+                                                        <div className="w-12 h-12 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 border border-stone-200">
+                                                            <UserCheck size={20} />
                                                         </div>
                                                     )}
                                                     <div className="overflow-hidden">
-                                                        <div className="font-medium text-stone-800 truncate">{student.firstName} {student.lastName}</div>
-                                                        <div className="text-xs text-stone-500 truncate">{student.school}</div>
+                                                        <div className="font-bold text-stone-900 truncate tracking-tight">{student.firstName} {student.lastName}</div>
+                                                        <div className="text-xs font-medium text-stone-500 truncate flex items-center gap-1">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                                                            {student.school}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}

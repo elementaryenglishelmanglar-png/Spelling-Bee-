@@ -230,9 +230,9 @@ const WordListItem: React.FC<WordListItemProps> = ({
   }
 
   return (
-    <div className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center group">
+    <div className="group flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center py-4 px-2 hover:bg-stone-100/50 transition-colors border-b border-stone-100 last:border-0">
       <div className="flex items-start gap-4 flex-1">
-        <div className="flex-shrink-0 w-8 h-8 bg-yellow-100 text-yellow-800 rounded-full flex items-center justify-center font-bold text-sm mt-1 border border-yellow-200">
+        <div className="flex-shrink-0 w-8 h-8 bg-stone-100 text-stone-500 rounded-lg flex items-center justify-center font-black text-sm mt-1 border border-stone-200 shadow-sm">
           {index + 1}
         </div>
 
@@ -244,12 +244,12 @@ const WordListItem: React.FC<WordListItemProps> = ({
 
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
-            <h3 className="text-lg font-bold text-stone-800">{word.word}</h3>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase
-              ${word.partOfSpeech === 'verb' ? 'bg-red-100 text-red-700' :
-                word.partOfSpeech === 'adjective' ? 'bg-blue-100 text-blue-700' :
+            <h3 className="text-lg font-bold text-stone-900 font-serif">{word.word}</h3>
+            <span className={`text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-widest
+              ${word.partOfSpeech === 'verb' ? 'bg-rose-100 text-rose-700' :
+                word.partOfSpeech === 'adjective' ? 'bg-sky-100 text-sky-700' :
                   word.partOfSpeech === 'adverb' ? 'bg-purple-100 text-purple-700' :
-                    'bg-green-100 text-green-700'
+                    'bg-emerald-100 text-emerald-700'
               }`}>
               {word.partOfSpeech || 'noun'}
             </span>
@@ -260,28 +260,28 @@ const WordListItem: React.FC<WordListItemProps> = ({
             )}
             <button
               onClick={() => speakWord(word.word, word.audioUrl)}
-              className={`p-1.5 rounded-full transition-colors ${word.audioUrl ? 'text-blue-500 hover:bg-blue-50' : 'text-stone-400 hover:text-stone-800 hover:bg-stone-100'}`}
+              className={`p-1.5 rounded-full transition-colors ${word.audioUrl ? 'text-amber-500 hover:bg-amber-50' : 'text-stone-400 hover:text-stone-800 hover:bg-stone-200'}`}
               title={word.audioUrl ? "Play Recorded Audio" : "Pronounce (Robot)"}
             >
               <Volume2 size={16} />
             </button>
           </div>
-          <p className="text-sm text-stone-600 mt-1"><span className="font-semibold text-stone-400">Def:</span> {word.definition}</p>
-          <p className="text-sm text-stone-500 italic mt-0.5"><span className="font-semibold not-italic text-stone-400">Ex:</span> "{word.example}"</p>
+          <p className="text-sm text-stone-600 mt-1"><span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider">Def:</span> {word.definition}</p>
+          <p className="text-sm text-stone-500 italic mt-0.5"><span className="text-[10px] uppercase font-bold text-stone-400 not-italic tracking-wider">Ex:</span> "{word.example}"</p>
         </div>
       </div>
 
       <div className="flex gap-2 self-end sm:self-center opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={() => setIsEditing(true)}
-          className="text-stone-400 hover:text-yellow-600 p-2 hover:bg-yellow-50 rounded-lg transition-colors"
+          className="text-stone-400 hover:text-amber-600 p-2 hover:bg-amber-50 rounded-lg transition-colors"
           title="Edit Word"
         >
           <Edit2 size={18} />
         </button>
         <button
           onClick={() => setShowDeleteConfirm(true)}
-          className="text-stone-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors"
+          className="text-stone-400 hover:text-rose-500 p-2 hover:bg-rose-50 rounded-lg transition-colors"
           title="Delete Word"
         >
           <Trash2 size={18} />
@@ -434,23 +434,25 @@ export const WordList: React.FC<WordListProps> = ({ words, currentGrade, onDelet
       )}
 
       {/* Word List */}
-      {filteredWords.length === 0 ? (
-        <div className="text-center py-8 text-stone-400">
-          <p>No words match your search criteria.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredWords.map((word, index) => (
-            <WordListItem
-              key={word.id}
-              word={word}
-              index={index}
-              onDelete={onDelete}
-              onUpdate={onUpdate}
-            />
-          ))}
-        </div>
-      )}
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+        {filteredWords.length === 0 ? (
+          <div className="text-center py-12 text-stone-400 bg-stone-50">
+            <p>No words match your search criteria.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-stone-100">
+            {filteredWords.map((word, index) => (
+              <WordListItem
+                key={word.id}
+                word={word}
+                index={index}
+                onDelete={onDelete}
+                onUpdate={onUpdate}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -127,8 +127,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-fade-in p-3 sm:p-4 mb-20">
 
             {/* Header */}
-            <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-stone-200 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-stone-200 flex flex-col gap-5">
+                {/* Student info row */}
+                <div className="flex items-center gap-4">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-stone-100 border-2 border-stone-200 overflow-hidden shadow-inner shrink-0">
                         {student.photo ? (
                             <img src={student.photo} alt={student.firstName} className="w-full h-full object-cover" />
@@ -138,62 +139,75 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                             </div>
                         )}
                     </div>
-                    <div className="text-left">
-                        <h1 className="text-xl sm:text-2xl font-bold text-stone-800">Hello, <span className="text-yellow-500">{student.firstName}</span>!</h1>
-                        <p className="text-sm sm:text-base text-stone-500">Ready to spell today?</p>
+                    <div className="text-left flex-1">
+                        <h1 className="text-xl sm:text-2xl font-bold text-stone-900">Hello, <span className="text-amber-500">{student.firstName}</span>!</h1>
+                        <p className="text-sm text-stone-500">Ready to spell today?</p>
                         <div className={`flex items-center gap-2 mt-1 font-bold text-sm ${rankColor}`}>
                             <RankIcon size={16} /> {rankTitle}
                         </div>
                     </div>
+                    {/* BeeCoins badge */}
+                    <div className="bg-amber-50 px-3 py-2 rounded-xl border border-amber-200 flex flex-col items-center shrink-0">
+                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wide">Balance</span>
+                        <span className="font-black text-amber-700 text-sm whitespace-nowrap">{student.coins ?? 0} 🐝</span>
+                    </div>
                 </div>
 
-                <div className="flex flex-wrap justify-center sm:justify-end gap-3 w-full md:w-auto">
-                    <div className="bg-yellow-100 px-3 py-2 sm:px-4 sm:py-2 rounded-xl border border-yellow-200 flex items-center">
-                        <span className="text-[10px] sm:text-xs font-bold text-yellow-700 uppercase mr-2">Balance</span>
-                        <span className="font-black text-yellow-800 text-base sm:text-lg whitespace-nowrap">{student.coins ?? 0} BeeCoins</span>
-                    </div>
-
+                {/* CTA Buttons — w-full, unified amber primary style */}
+                <div className="grid grid-cols-2 gap-3">
                     <button
                         onClick={() => onStartPractice('generator')}
-                        className="px-4 py-2 sm:px-6 sm:py-3 bg-yellow-400 hover:bg-yellow-300 text-stone-900 rounded-xl font-bold transition-all shadow-md active:scale-95 text-sm sm:text-base flex-1 sm:flex-none"
+                        className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-stone-900 rounded-2xl font-bold transition-all shadow-md text-sm flex items-center justify-center gap-2"
                     >
-                        Practice
+                        <BookOpen size={18} /> Practice
                     </button>
                     <button
                         onClick={() => onStartPractice('drill')}
-                        className="px-4 py-2 sm:px-6 sm:py-3 bg-stone-800 hover:bg-stone-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-95 text-sm sm:text-base flex-1 sm:flex-none"
+                        className="w-full py-3.5 bg-stone-900 hover:bg-stone-800 active:scale-[0.98] text-amber-400 rounded-2xl font-bold transition-all shadow-md text-sm flex items-center justify-center gap-2"
                     >
-                        Exercises
+                        <Target size={18} /> Exercises
                     </button>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
 
-                {/* Progress Card */}
-                <div className="md:col-span-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-4 sm:p-6 text-white shadow-lg relative overflow-visible">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><Trophy size={100} className="sm:w-[120px] sm:h-[120px]" /></div>
+                {/* Progress Card — dark premium */}
+                <div className="md:col-span-2 bg-stone-900 rounded-3xl p-4 sm:p-6 text-white shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Trophy size={120} /></div>
                     <div className="relative z-10">
-                        <h3 className="text-base sm:text-lg font-bold opacity-90 mb-1">Your Progress</h3>
-                        <div className="flex items-end gap-2 mb-4">
-                            <span className="text-3xl sm:text-4xl font-black">{currentXP.toLocaleString()}</span>
-                            <span className="text-xs sm:text-sm font-bold opacity-70 mb-2">XP earned</span>
+                        <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Your Progress</h3>
+                        <div className="flex items-end gap-2 mb-5">
+                            <span className="text-3xl sm:text-4xl font-black text-white">{currentXP.toLocaleString()}</span>
+                            <span className="text-xs sm:text-sm font-semibold text-stone-400 mb-1.5">XP earned</span>
                         </div>
 
-                        <div className="mb-2 flex justify-between text-xs font-bold opacity-80">
-                            <span>Current Level</span>
-                            <span>{xpToNext} XP to next level</span>
+                        <div className="mb-2 flex justify-between text-xs font-bold text-stone-500">
+                            <span>{rankTitle}</span>
+                            <span className="text-amber-400">{xpToNext} XP to next</span>
                         </div>
-                        <div className="relative h-4 bg-black/20 rounded-full backdrop-blur-sm mt-4">
+                        {/* Progress bar — amber-500 with glow */}
+                        <div className="relative h-3 bg-stone-700 rounded-full overflow-hidden">
                             <div
-                                className="absolute top-0 left-0 h-full bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)] transition-all duration-1000 ease-out rounded-full"
-                                style={{ width: `${progressPercent}%` }}
-                            ></div>
-
-                            {/* Milestones / Chests */}
-                            {[25, 50, 75, 100].map(pct => (
-                                <div key={pct} className="absolute top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center transform hover:scale-125 transition-transform cursor-pointer" style={{ left: `${pct}%`, marginLeft: '-12px' }}>
-                                    <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-sm rotate-45 ${progressPercent >= pct ? 'bg-yellow-300 shadow-glow' : 'bg-stone-600 border border-stone-500'}`}></div>
+                                className="absolute top-0 left-0 h-full bg-amber-500 transition-all duration-1000 ease-out rounded-full"
+                                style={{
+                                    width: `${progressPercent}%`,
+                                    boxShadow: '0 0 12px rgba(245,158,11,0.6), 0 0 4px rgba(245,158,11,0.4)'
+                                }}
+                            />
+                        </div>
+                        {/* Milestone dots */}
+                        <div className="relative h-0 mt-1">
+                            {[25, 50, 75].map(pct => (
+                                <div
+                                    key={pct}
+                                    className="absolute -top-4 -translate-x-1/2"
+                                    style={{ left: `${pct}%` }}
+                                >
+                                    <div className={`w-2 h-2 rounded-full border ${progressPercent >= pct
+                                            ? 'bg-amber-400 border-amber-300'
+                                            : 'bg-stone-600 border-stone-500'
+                                        }`} />
                                 </div>
                             ))}
                         </div>
@@ -202,13 +216,22 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
 
                 {/* Streak & Rank */}
                 <div className="space-y-4 sm:space-y-6">
-                    <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-3xl p-4 sm:p-6 text-white shadow-lg flex items-center justify-between relative overflow-hidden group">
-                        <div className="absolute -left-4 -bottom-4 opacity-20"><Flame size={80} className="sm:w-[100px] sm:h-[100px]" /></div>
-                        <div className="relative z-10">
-                            <h3 className="text-base sm:text-lg font-bold opacity-90">Daily Streak</h3>
-                            <div className="text-3xl sm:text-4xl font-black">{student.current_streak || 0} <span className="text-base sm:text-lg">Days</span></div>
+                    {/* Streak Card — clean white */}
+                    <div className="bg-white rounded-3xl p-4 sm:p-6 border border-stone-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Daily Streak</h3>
+                            <div className="text-3xl sm:text-4xl font-black text-stone-900">
+                                {student.current_streak || 0}
+                                <span className="text-base sm:text-lg font-semibold text-stone-400 ml-1">Days</span>
+                            </div>
                         </div>
-                        <Flame size={32} className="sm:w-10 sm:h-10 text-yellow-300 animate-pulse drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+                        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center">
+                            <Flame
+                                size={30}
+                                className="text-amber-500"
+                                style={{ filter: 'drop-shadow(0 0 6px rgba(245,158,11,0.5))' }}
+                            />
+                        </div>
                     </div>
 
                     <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-stone-200 flex items-center justify-between">

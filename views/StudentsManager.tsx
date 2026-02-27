@@ -145,11 +145,11 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
         {/* Registration Form */}
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm sticky top-24">
-            <h3 className="font-bold text-stone-800 mb-4 flex items-center gap-2">
+            <h3 className="font-bold text-stone-900 mb-6 flex items-center gap-2 font-serif text-lg">
               {editingStudent ? (
                 <><Pencil size={18} className="text-amber-500" /> Edit Student</>
               ) : (
-                <><Plus size={18} className="text-yellow-500" /> New Student</>
+                <><Plus size={18} className="text-amber-500" /> New Student</>
               )}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -276,7 +276,9 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
                 )}
                 <button
                   type="submit"
-                  className={editingStudent ? "flex-1 py-3 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 transition-colors shadow-md" : "w-full py-3 bg-stone-800 text-yellow-400 rounded-xl font-bold hover:bg-stone-900 transition-colors shadow-md"}
+                  className={editingStudent
+                    ? "flex-1 py-3 bg-stone-900 text-amber-500 rounded-xl font-bold hover:bg-stone-800 transition-colors shadow-sm"
+                    : "w-full py-3 bg-amber-500 text-stone-900 rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-sm"}
                 >
                   {editingStudent ? 'Save changes' : 'Register Student'}
                 </button>
@@ -285,10 +287,10 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
           </div>
         </div>
 
-        {/* Student List */}
+        {/* Student List Grid */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-stone-200 shadow-sm gap-4">
-            <span className="font-bold text-stone-700">Total Registered: {filteredStudents.length}</span>
+            <span className="font-bold text-stone-900">Total Registered: {filteredStudents.length}</span>
 
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold text-stone-400 uppercase">Filters:</span>
@@ -319,51 +321,53 @@ export const StudentsManager: React.FC<StudentsManagerProps> = ({ students, onAd
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
             {filteredStudents.length === 0 ? (
-              <div className="col-span-full py-12 text-center text-stone-400 border-2 border-dashed border-stone-200 rounded-xl">
+              <div className="col-span-full py-16 text-center text-stone-400 bg-stone-50">
                 No students match the current filters.
               </div>
             ) : (
-              filteredStudents.map(student => (
-                <div key={student.id} className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm hover:border-yellow-300 transition-all group flex justify-between items-start">
-                  <div className="flex gap-3 items-center">
-                    <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-100 shrink-0 overflow-hidden">
-                      {student.photo ? (
-                        <img src={student.photo} alt={student.firstName} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-orange-600 font-bold">
-                          {student.firstName[0]}{student.lastName[0]}
+              <div className="divide-y divide-stone-100">
+                {filteredStudents.map(student => (
+                  <div key={student.id} className="p-4 hover:bg-stone-100/50 transition-colors group flex justify-between items-center">
+                    <div className="flex gap-4 items-center">
+                      <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 shrink-0 overflow-hidden shadow-sm">
+                        {student.photo ? (
+                          <img src={student.photo} alt={student.firstName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-stone-400 font-bold font-serif text-lg">
+                            {student.firstName[0]}{student.lastName[0]}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-stone-900 font-serif text-lg">{student.firstName} {student.lastName}</h4>
+                        <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">
+                          <span className="flex items-center gap-1"><School size={12} className="text-stone-400" /> {student.school}</span>
+                          <span className="w-1 h-1 rounded-full bg-stone-300"></span>
+                          <span className="font-bold text-stone-400 uppercase tracking-wider text-[10px]">{getGradeLabel(student.grade)}</span>
                         </div>
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-stone-800">{student.firstName} {student.lastName}</h4>
-                      <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">
-                        <span className="flex items-center gap-1"><School size={12} /> {student.school}</span>
-                        <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-                        <span className="font-bold text-stone-400">{getGradeLabel(student.grade)}</span>
                       </div>
                     </div>
+                    <div className="flex items-center gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => setEditingStudent(student)}
+                        className="p-2 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                      <button
+                        onClick={() => setStudentToDelete(student)}
+                        className="p-2 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setEditingStudent(student)}
-                      className="p-2 text-stone-300 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                      title="Edit"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      onClick={() => setStudentToDelete(student)}
-                      className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         </div>

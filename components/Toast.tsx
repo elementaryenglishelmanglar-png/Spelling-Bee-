@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, X, Info } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -25,30 +25,31 @@ const ToastItem: React.FC<ToastProps> = ({ toast, onClose }) => {
   }, [toast.id, toast.duration, onClose]);
 
   const icons = {
-    success: <CheckCircle size={20} className="text-green-600" />,
-    error: <XCircle size={20} className="text-red-600" />,
-    warning: <AlertCircle size={20} className="text-orange-600" />,
-    info: <AlertCircle size={20} className="text-blue-600" />,
+    success: <CheckCircle size={20} className="text-emerald-500" />,
+    error: <XCircle size={20} className="text-rose-500" />,
+    warning: <AlertCircle size={20} className="text-amber-500" />,
+    info: <Info size={20} className="text-amber-500" />,
   };
 
-  const bgColors = {
-    success: 'bg-green-50 border-green-200',
-    error: 'bg-red-50 border-red-200',
-    warning: 'bg-orange-50 border-orange-200',
-    info: 'bg-blue-50 border-blue-200',
+  const borderAccents = {
+    success: 'border-l-emerald-500',
+    error: 'border-l-rose-500',
+    warning: 'border-l-amber-500',
+    info: 'border-l-amber-500',
   };
 
   return (
     <div
-      className={`${bgColors[toast.type]} border rounded-xl p-4 shadow-lg flex items-start gap-3 min-w-[300px] max-w-md animate-slide-in-right`}
+      className={`bg-stone-800 text-white rounded-xl p-4 shadow-xl flex items-start gap-3 min-w-[280px] max-w-sm border-l-4 ${borderAccents[toast.type]} 
+      animate-slide-up-fade-in pointer-events-auto transition-all`}
     >
       <div className="flex-shrink-0 mt-0.5">{icons[toast.type]}</div>
       <div className="flex-1">
-        <p className="text-sm font-medium text-stone-800">{toast.message}</p>
+        <p className="text-sm font-semibold tracking-wide">{toast.message}</p>
       </div>
       <button
         onClick={() => onClose(toast.id)}
-        className="flex-shrink-0 text-stone-400 hover:text-stone-600 transition-colors"
+        className="flex-shrink-0 text-stone-400 hover:text-white transition-colors"
       >
         <X size={16} />
       </button>
@@ -65,11 +66,9 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose 
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col-reverse gap-3 pointer-events-none">
       {toasts.map((toast) => (
-        <div key={toast.id} className="pointer-events-auto">
-          <ToastItem toast={toast} onClose={onClose} />
-        </div>
+        <ToastItem key={toast.id} toast={toast} onClose={onClose} />
       ))}
     </div>
   );

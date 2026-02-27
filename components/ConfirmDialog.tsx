@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, Info, XCircle } from 'lucide-react';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -24,59 +24,42 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const colors = {
-    danger: {
-      bg: 'bg-red-50',
-      border: 'border-red-200',
-      icon: 'text-red-600',
-      button: 'bg-red-600 hover:bg-red-700',
-    },
-    warning: {
-      bg: 'bg-orange-50',
-      border: 'border-orange-200',
-      icon: 'text-orange-600',
-      button: 'bg-orange-600 hover:bg-orange-700',
-    },
-    info: {
-      bg: 'bg-blue-50',
-      border: 'border-blue-200',
-      icon: 'text-blue-600',
-      button: 'bg-blue-600 hover:bg-blue-700',
-    },
+  const btnColors = {
+    danger: 'bg-rose-700 text-white hover:bg-rose-800 shadow-md',
+    warning: 'bg-amber-500 text-stone-900 hover:bg-amber-600 shadow-md',
+    info: 'bg-amber-500 text-stone-900 hover:bg-amber-600 shadow-md',
   };
 
-  const colorScheme = colors[type];
+  const iconColors = {
+    danger: <XCircle size={32} className="text-rose-600" />,
+    warning: <AlertTriangle size={32} className="text-amber-500" />,
+    info: <Info size={32} className="text-amber-500" />,
+  };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className={`bg-white rounded-2xl shadow-2xl max-w-md w-full ${colorScheme.bg} ${colorScheme.border} border-2`}>
-        <div className="p-6">
-          <div className="flex items-start gap-4 mb-4">
-            <div className={`flex-shrink-0 ${colorScheme.icon}`}>
-              <AlertTriangle size={32} />
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-stone-50 rounded-3xl shadow-2xl max-w-md w-full border border-stone-200 transform scale-100 transition-transform">
+        <div className="p-6 sm:p-8">
+          <div className="flex items-start gap-4 mb-6">
+            <div className="flex-shrink-0 mt-1">
+              {iconColors[type]}
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold text-stone-800 mb-2">{title}</h3>
-              <p className="text-stone-600">{message}</p>
+              <h3 className="text-2xl font-black text-stone-900 mb-2 font-serif leading-tight">{title}</h3>
+              <p className="text-stone-600 font-sans leading-relaxed text-sm">{message}</p>
             </div>
-            <button
-              onClick={onCancel}
-              className="flex-shrink-0 text-stone-400 hover:text-stone-600 transition-colors"
-            >
-              <X size={20} />
-            </button>
           </div>
-          
-          <div className="flex gap-3 justify-end">
+
+          <div className="flex gap-3 justify-end pt-2">
             <button
               onClick={onCancel}
-              className="px-4 py-2 text-stone-600 hover:bg-stone-100 rounded-lg font-medium transition-colors"
+              className="px-5 py-2.5 bg-transparent text-stone-500 hover:text-stone-700 hover:bg-stone-200 rounded-xl font-bold transition-colors"
             >
               {cancelText}
             </button>
             <button
               onClick={onConfirm}
-              className={`px-4 py-2 ${colorScheme.button} text-white rounded-lg font-bold transition-colors`}
+              className={`px-6 py-2.5 font-bold rounded-xl transition-all active:scale-[0.98] ${btnColors[type]}`}
             >
               {confirmText}
             </button>

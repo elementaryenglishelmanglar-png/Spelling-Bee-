@@ -99,16 +99,16 @@ export const WordForm: React.FC<WordFormProps> = ({ currentGrade, onAddWord }) =
   };
 
   return (
-    <div className="bg-gradient-to-br from-yellow-50 to-white p-6 rounded-2xl border border-yellow-200 shadow-sm mb-8">
-      <h3 className="text-md font-bold text-stone-800 mb-4 flex items-center gap-2">
-        Add New Word to Grade {currentGrade}
+    <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm mb-8 transition-all hover:shadow-md">
+      <h3 className="text-lg font-bold text-stone-900 mb-6 flex items-center gap-2 font-serif">
+        Add New Word to {currentGrade === 12 ? 'Group 3' : `Grade ${currentGrade}`}
       </h3>
 
-      <div className="flex flex-col md:flex-row gap-4 items-start">
+      <div className="flex flex-col md:flex-row gap-6 items-start">
         {/* Image Upload Box */}
         <div className="flex-shrink-0">
           <div
-            className="w-20 h-20 rounded-xl bg-white border-2 border-dashed border-stone-300 flex items-center justify-center overflow-hidden cursor-pointer hover:border-yellow-400 transition-colors relative"
+            className="w-24 h-24 rounded-2xl bg-stone-50 border-2 border-dashed border-stone-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-amber-400 hover:bg-amber-50 transition-colors relative group"
             onClick={() => fileInputRef.current?.click()}
           >
             {image ? (
@@ -153,7 +153,7 @@ export const WordForm: React.FC<WordFormProps> = ({ currentGrade, onAddWord }) =
             <button
               onClick={handleAIAdd}
               disabled={isLoading}
-              className="flex-1 flex items-center justify-center gap-2 bg-stone-800 hover:bg-stone-900 disabled:bg-stone-500 text-yellow-400 px-6 py-3 rounded-xl font-bold transition-all shadow-md"
+              className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:bg-stone-300 disabled:text-stone-500 text-stone-900 px-6 py-3 rounded-xl font-bold transition-all shadow-sm"
             >
               {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
               <span>AI Auto-Fill</span>
@@ -161,7 +161,7 @@ export const WordForm: React.FC<WordFormProps> = ({ currentGrade, onAddWord }) =
             <button
               onClick={handleManualAdd}
               disabled={isLoading}
-              className="flex items-center justify-center gap-2 bg-white hover:bg-stone-50 text-stone-700 border border-stone-300 px-6 py-3 rounded-xl font-medium transition-all"
+              className="flex items-center justify-center gap-2 bg-white hover:bg-stone-50 text-stone-600 border border-stone-200 px-6 py-3 rounded-xl font-bold transition-all"
             >
               <Plus size={18} />
               <span className="hidden sm:inline">Manual Add</span>
