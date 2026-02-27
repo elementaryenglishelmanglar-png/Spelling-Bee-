@@ -146,6 +146,11 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (file.size > 10 * 1024 * 1024) {
+                showToast('Photo exceeds 10MB limit. Please choose a smaller file.', 'error');
+                e.target.value = '';
+                return;
+            }
             const reader = new FileReader();
             reader.onloadend = () => {
                 setPhoto(reader.result as string);
@@ -463,7 +468,8 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                                                         </span>
                                                         <p className="pl-1">or drag and drop</p>
                                                     </div>
-                                                    <p className="text-xs text-stone-400 font-medium">PNG, JPG, GIF up to 5MB</p>
+                                                    <p className="text-xs text-stone-400 font-medium">PNG or JPG · Max 10MB</p>
+                                                    <p className="text-xs text-stone-400">Please upload a picture with a good light, quality, and clear background.</p>
                                                 </>
                                             )}
                                         </div>
