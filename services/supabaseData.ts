@@ -60,7 +60,6 @@ export async function addWord(entry: WordEntry): Promise<WordEntry> {
       definition: entry.definition,
       example: entry.example,
       grade: entry.grade,
-      difficulty: null,          // legacy column – always null, constraint should be dropped
       part_of_speech: entry.partOfSpeech ?? null,
       theme: entry.theme ?? null,
       image_url: imageUrl,
