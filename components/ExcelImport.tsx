@@ -96,11 +96,11 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
         }
 
         // ----------------------------------------------------------------
-        // Enrich each word with AI — NEVER skip, retry until success
+        // Enrich each word — Gemini first, OpenRouter as fallback.
+        // Never skip a word; retry the pair indefinitely (30s wait each round).
         // ----------------------------------------------------------------
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-        // Time between words (6s ≈ 10 req/min, safely under the 15 RPM limit)
-        const BETWEEN_WORDS_MS = 6000;
+        const BETWEEN_WORDS_MS = 6000; // 6s between words ≈ 10 req/min
 
         setStatus('enriching');
         let succeeded = 0;
@@ -112,20 +112,19 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
             let wordSaved = false;
             let attempt = 0;
 
-            // Keep retrying this word until it succeeds (or user cancels)
             while (!wordSaved && !abortRef.current) {
                 attempt++;
-
                 setProgress({
                     current: i + 1,
                     total: rows.length,
                     currentWord: word,
                     succeeded,
-                    failed: 0,         // we never permanently fail a word
+                    failed: 0,
                     retrying: attempt > 1 ? attempt : undefined,
                 });
 
                 try {
+                    // enrichWordWithGemini internally falls back to OpenRouter on error
                     const enrichment = await enrichWordWithGemini(word, currentGrade);
                     const newWord: WordEntry = {
                         id: crypto.randomUUID(),
@@ -137,8 +136,6 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                     onAddWord(newWord);
                     succeeded++;
                     wordSaved = true;
-
-                    // Update progress to reflect success before moving on
                     setProgress({
                         current: i + 1,
                         total: rows.length,
@@ -146,20 +143,14 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                         succeeded,
                         failed: 0,
                     });
-
                 } catch {
-                    // Wait longer with each retry: 30s, 60s, 90s ... capped at 2 min
-                    const waitMs = Math.min(30000 * attempt, 120000);
-                    setProgress(prev => prev ? {
-                        ...prev,
-                        waitingMs: waitMs,
-                        retrying: attempt + 1,
-                    } : null);
+                    // Both APIs failed — wait 30s then retry the pair
+                    const waitMs = 30000;
+                    setProgress(prev => prev ? { ...prev, waitingMs: waitMs, retrying: attempt + 1 } : null);
                     await sleep(waitMs);
                 }
             }
 
-            // Pause between words to respect rate limits (skip pause after last word)
             if (i < rows.length - 1 && !abortRef.current) {
                 await sleep(BETWEEN_WORDS_MS);
             }
