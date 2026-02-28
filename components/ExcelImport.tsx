@@ -96,6 +96,10 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
         // ----------------------------------------------------------------
         // Enrich each word with AI, one by one
         // ----------------------------------------------------------------
+        // Gemini free tier: ~15 RPM → wait 4 seconds between calls
+        const DELAY_MS = 4000;
+        const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
         setStatus('enriching');
         let succeeded = 0;
         let failed = 0;
@@ -106,22 +110,38 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
             const { wordNumber, word } = rows[i];
             setProgress({ current: i + 1, total: rows.length, currentWord: word, succeeded, failed });
 
-            try {
-                const enrichment = await enrichWordWithGemini(word, currentGrade);
-                const newWord: WordEntry = {
-                    id: crypto.randomUUID(),
-                    word,
-                    grade: currentGrade,
-                    wordNumber,
-                    ...enrichment,
-                };
-                onAddWord(newWord);
-                succeeded++;
-            } catch {
-                failed++;
+            // Attempt with one retry on 429
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    const enrichment = await enrichWordWithGemini(word, currentGrade);
+                    const newWord: WordEntry = {
+                        id: crypto.randomUUID(),
+                        word,
+                        grade: currentGrade,
+                        wordNumber,
+                        ...enrichment,
+                    };
+                    onAddWord(newWord);
+                    succeeded++;
+                    break; // success → stop retry loop
+                } catch (err: any) {
+                    const is429 = String(err?.message ?? err).includes('429') || String(err?.status ?? '').includes('429');
+                    if (is429 && attempt === 0) {
+                        // Wait 12 seconds and retry once
+                        await sleep(12000);
+                    } else {
+                        failed++;
+                        break;
+                    }
+                }
             }
 
             setProgress({ current: i + 1, total: rows.length, currentWord: word, succeeded, failed });
+
+            // Rate-limit pause before next word (skip after last word)
+            if (i < rows.length - 1 && !abortRef.current) {
+                await sleep(DELAY_MS);
+            }
         }
 
         setStatus('done');
@@ -216,8 +236,15 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                                 {/* Progress bar */}
                                 <div>
                                     <div className="flex justify-between text-xs text-stone-500 mb-1.5">
-                                        <span>{status === 'done' ? 'Complete!' : `Processing ${progress.current} of ${progress.total}`}</span>
-                                        <span>{Math.round((progress.current / progress.total) * 100)}%</span>
+                                        <span>{status === 'done' ? 'Complete!' : `Word ${progress.current} of ${progress.total}`}</span>
+                                        <span className="flex items-center gap-2">
+                                            {status === 'enriching' && (
+                                                <span className="text-amber-600 font-medium">
+                                                    ~{Math.ceil((progress.total - progress.current) * 4 / 60)}m remaining
+                                                </span>
+                                            )}
+                                            {Math.round((progress.current / progress.total) * 100)}%
+                                        </span>
                                     </div>
                                     <div className="h-2.5 bg-stone-100 rounded-full overflow-hidden">
                                         <div
