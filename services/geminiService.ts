@@ -87,9 +87,9 @@ async function callOpenRouter(word: string, grade: GradeLevel): Promise<WordEnri
       "X-Title": "Spelling Bee Manager",
     },
     body: JSON.stringify({
-      model: "upstage/solar-pro",          // Solar Pro 3 (free) on OpenRouter
+      model: "upstage/solar-pro-3:free",   // ✅ correct OpenRouter model ID
       messages: [{ role: "user", content: buildPrompt(word, grade) }],
-      response_format: { type: "json_object" },
+      // NOTE: Solar Pro 3 does not support response_format, so we rely on prompt instructions
     }),
   });
 
@@ -99,9 +99,14 @@ async function callOpenRouter(word: string, grade: GradeLevel): Promise<WordEnri
   }
 
   const json = await res.json();
-  const content = json?.choices?.[0]?.message?.content;
+  const content: string = json?.choices?.[0]?.message?.content ?? "";
   if (!content) throw new Error("No response from OpenRouter");
-  return JSON.parse(content) as WordEnrichmentResponse;
+
+  // Extract JSON — some models wrap it in ```json ... ``` fences
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("OpenRouter response did not contain valid JSON");
+
+  return JSON.parse(jsonMatch[0]) as WordEnrichmentResponse;
 }
 
 // ─── Public API: Gemini first, OpenRouter as fallback ────────────────────────
