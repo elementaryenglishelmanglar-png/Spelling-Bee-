@@ -12,7 +12,7 @@ export const enrichWordWithGemini = async (word: string, grade: GradeLevel): Pro
     throw new Error("Gemini API key is missing. Set VITE_GEMINI_API_KEY in your .env.local file.");
   }
 
-  const model = "gemini-3-flash-preview";
+  const model = "gemini-2.5-flash";
 
   const prompt = `
     Provide a clear definition and a simple example sentence for the spelling bee word: "${word}".
