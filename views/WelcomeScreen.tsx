@@ -199,15 +199,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSelectRole, beeI
             </div>
           )}
 
-          {/* h1 will automatically use Playfair Display via CSS */}
           <h1 className="text-4xl md:text-6xl font-black text-stone-900 mb-4 tracking-tight">
             Spelling Bee{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
-              Manager
+              Manglar 2026
             </span>
           </h1>
           <p className="text-lg md:text-xl text-stone-500 max-w-2xl mx-auto font-medium font-sans">
-            The ultimate platform for champions.
+            Welcome to the 4th Edition
           </p>
 
           {/* Decorative amber rule */}

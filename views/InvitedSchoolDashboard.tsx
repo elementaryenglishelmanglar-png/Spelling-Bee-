@@ -265,19 +265,27 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
             <nav className="bg-stone-900 text-white border-b border-stone-800 sticky top-0 z-50 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg bg-stone-800 flex items-center justify-center border border-stone-700 overflow-hidden shadow-inner">
-                                {school.logo ? (
-                                    <img src={school.logo} alt="Logo" className="w-full h-full object-contain p-1" />
-                                ) : (
-                                    <Users size={24} className="text-stone-400" />
-                                )}
-                            </div>
-                            <div>
-                                <h1 className="text-xl sm:text-2xl font-black text-white leading-tight font-serif tracking-wide">
+                        <div className="flex items-center gap-4 sm:gap-6">
+                            {/* School Logo */}
+                            {school.logo ? (
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-2xl flex items-center justify-center p-2 shadow-lg border-2 border-amber-500/20 flex-shrink-0 transition-transform hover:scale-105 duration-300">
+                                    <img src={school.logo} alt="School Logo" className="w-full h-full object-contain drop-shadow-sm" />
+                                </div>
+                            ) : (
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-stone-800 flex items-center justify-center border border-stone-700 shadow-inner flex-shrink-0">
+                                    <Users size={32} className="text-stone-400" />
+                                </div>
+                            )}
+
+                            {/* School Details */}
+                            <div className="flex flex-col justify-center">
+                                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight font-serif tracking-wide drop-shadow-sm">
                                     {school.name}
                                 </h1>
-                                <p className="text-[10px] text-amber-400 font-bold uppercase tracking-[0.2em] mt-0.5">Invited School Portal</p>
+                                <p className="text-[10px] sm:text-xs text-amber-400 font-bold uppercase tracking-[0.2em] mt-1 sm:mt-1.5 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                    Invited School Portal
+                                </p>
                             </div>
                         </div>
 
@@ -309,14 +317,20 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                             <span className="text-xs font-semibold text-stone-500 mb-1">Students</span>
                         </div>
                     </div>
-                    <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col">
+                    <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Docs Limit</span>
-                            <FileText size={16} className="text-amber-500" />
+                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Recent Activity</span>
+                            <Clock size={16} className="text-amber-500 flex-shrink-0" />
                         </div>
-                        <div className="flex items-end gap-2">
-                            <span className="text-3xl font-black text-stone-900 leading-none">{resources.length}</span>
-                            <span className="text-xs font-semibold text-stone-500 mb-1">Files</span>
+                        <div className="flex flex-col">
+                            {resources.length > 0 ? (
+                                <>
+                                    <span className="text-sm font-bold text-stone-800 line-clamp-2 leading-tight mb-1" title={resources[0].title}>{resources[0].title}</span>
+                                    <span className="text-[10px] font-medium text-stone-400">Added {new Date(resources[0].createdAt).toLocaleDateString()}</span>
+                                </>
+                            ) : (
+                                <span className="text-xs font-semibold text-stone-400">No recent activity</span>
+                            )}
                         </div>
                     </div>
                     <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col col-span-2 md:col-span-2 overflow-hidden relative">
@@ -339,9 +353,9 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                     <SponsorGrid />
                 </div>
 
-                {/* Pill Tabs for Navigation */}
-                <div className="mb-8 overflow-x-auto pb-2 scrollbar-none">
-                    <div className="flex items-center gap-2 min-w-max">
+                {/* Responsive Pill Tabs for Navigation */}
+                <div className="mb-8">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3">
                         {[
                             { id: 'delegation', label: 'Delegation', icon: Users },
                             { id: 'registration', label: 'Register', icon: CheckCircle },
@@ -354,10 +368,10 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
                                 className={`
-                                    flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap outline-none border
+                                    flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full text-sm font-bold transition-all outline-none border active:scale-95
                                     ${activeTab === tab.id
-                                        ? 'bg-stone-900 text-amber-400 border-stone-900 shadow-md transform scale-[1.02]'
-                                        : 'bg-transparent text-stone-500 border-stone-200 hover:bg-stone-100 hover:text-stone-800'
+                                        ? 'bg-stone-900 text-amber-400 border-stone-900 shadow-md scale-[1.02]'
+                                        : 'bg-white text-stone-500 border-stone-200 shadow-sm hover:bg-stone-50 hover:border-stone-300 hover:text-stone-800'
                                     }
                                 `}
                             >

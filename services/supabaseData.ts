@@ -603,7 +603,7 @@ export async function fetchLeaderboard(grade?: number): Promise<StudentProfile[]
     id: row.id,
     firstName: row.first_name,
     lastName: row.last_name,
-    school: row.school_name ?? 'Unknown School', // Fallback
+    school: row.school ?? 'Unknown School', // Fallback
     grade: row.grade as GradeLevel,
     schoolId: row.school_id ?? undefined,
     photo: row.photo_url ?? undefined,

@@ -225,16 +225,16 @@ export const Leaderboard: React.FC = () => {
                     </div>
                 </div>
 
-                {/* League pills — scrollable horizontal row */}
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {/* League pills — wrapping flex row */}
+                <div className="flex flex-wrap justify-center gap-2">
                     {LEAGUES.map(({ id, emoji, label }) => (
                         <button
                             key={id}
                             onClick={() => setSelectedLeague(id)}
-                            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all shrink-0 border
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border active:scale-95
                                 ${selectedLeague === id
-                                    ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
-                                    : 'bg-stone-100 text-stone-500 border-stone-200 hover:border-stone-300 hover:text-stone-700'}`}
+                                    ? 'bg-stone-900 text-white border-stone-900 shadow-md scale-105'
+                                    : 'bg-stone-100 text-stone-500 border-stone-200 shadow-sm hover:bg-white hover:border-stone-300 hover:text-stone-700'}`}
                         >
                             {emoji && <span>{emoji}</span>}
                             {label}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { School, StudentProfile, Payment, SchoolResource, GradeLevel } from '../types';
 import { fetchSchools, addSchool, updateSchool, deleteSchool, fetchStudents, fetchPayments, updatePayment, fetchSchoolResources, addSchoolResource, deleteSchoolResource } from '../services/supabaseData';
 import { useToast } from '../lib/toastContext';
 import { LoadingOverlay } from '../components/LoadingSpinner';
-import { Plus, School as SchoolIcon, Users, ChevronRight, UserCheck, Trash2, Edit2, DollarSign, Upload, Image as ImageIcon, CheckCircle, XCircle, Clock, FileText, Trophy } from 'lucide-react';
+import { Plus, School as SchoolIcon, Users, ChevronRight, UserCheck, Trash2, Edit2, DollarSign, Upload, Image as ImageIcon, CheckCircle, XCircle, Clock, FileText, Trophy, Download } from 'lucide-react';
 
 export const InterschoolManager: React.FC = () => {
     const { showToast } = useToast();
@@ -27,6 +28,9 @@ export const InterschoolManager: React.FC = () => {
     const [resourceTitle, setResourceTitle] = useState('');
     const [resourceGrade, setResourceGrade] = useState<GradeLevel>(1);
     const [resourceFile, setResourceFile] = useState<File | null>(null);
+
+    // Selected photo modal
+    const [selectedPhotoInfo, setSelectedPhotoInfo] = useState<{ student: StudentProfile, grade: number } | null>(null);
 
     useEffect(() => {
         loadData();
@@ -582,19 +586,23 @@ export const InterschoolManager: React.FC = () => {
                                             <div className="flex-1 h-px bg-stone-100 ml-4"></div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                                             {gradeStudents.map(student => (
-                                                <div key={student.id} className="group flex items-center gap-3 p-3 bg-white border border-stone-200 rounded-2xl hover:border-amber-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+                                                <div
+                                                    key={student.id}
+                                                    onClick={() => setSelectedPhotoInfo({ student, grade })}
+                                                    className="group flex flex-col items-center gap-3 p-4 bg-white border border-stone-200 rounded-3xl hover:border-amber-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer text-center"
+                                                >
                                                     {student.photo ? (
-                                                        <img src={student.photo} alt="" className="w-12 h-12 rounded-xl object-cover shadow-sm bg-stone-100" />
+                                                        <img src={student.photo} alt="" className="w-full aspect-square object-cover rounded-2xl shadow-sm bg-stone-100" />
                                                     ) : (
-                                                        <div className="w-12 h-12 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 border border-stone-200">
-                                                            <UserCheck size={20} />
+                                                        <div className="w-full aspect-square bg-stone-50 rounded-2xl flex items-center justify-center text-stone-300 border border-stone-200">
+                                                            <UserCheck size={48} />
                                                         </div>
                                                     )}
-                                                    <div className="overflow-hidden">
-                                                        <div className="font-bold text-stone-900 truncate tracking-tight">{student.firstName} {student.lastName}</div>
-                                                        <div className="text-xs font-medium text-stone-500 truncate flex items-center gap-1">
+                                                    <div className="w-full overflow-hidden">
+                                                        <div className="font-bold text-stone-900 truncate tracking-tight text-base sm:text-lg">{student.firstName} {student.lastName}</div>
+                                                        <div className="text-[10px] sm:text-xs font-bold text-stone-500 truncate flex items-center justify-center gap-1.5 mt-0.5 uppercase tracking-wider">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
                                                             {student.school}
                                                         </div>
@@ -608,6 +616,82 @@ export const InterschoolManager: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {selectedPhotoInfo && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-stone-900/90 p-4 backdrop-blur-sm animate-fade-in" onClick={() => setSelectedPhotoInfo(null)}>
+                    <div className="relative bg-white rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => setSelectedPhotoInfo(null)}
+                            className="absolute top-4 right-4 bg-stone-900/50 text-white p-2 rounded-full hover:bg-black transition-colors z-20 backdrop-blur-md"
+                        >
+                            <XCircle size={24} />
+                        </button>
+
+                        <div className="relative w-full bg-stone-100 flex items-center justify-center border-b border-stone-100 min-h-[300px] sm:min-h-[400px]">
+                            {selectedPhotoInfo.student.photo ? (
+                                <img src={selectedPhotoInfo.student.photo} alt="Student" className="w-full max-h-[60vh] object-contain" />
+                            ) : (
+                                <UserCheck size={80} className="text-stone-300" />
+                            )}
+                        </div>
+
+                        <div className="p-6 sm:p-8 bg-white flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
+                            <div className="overflow-hidden w-full">
+                                <h4 className="text-2xl font-black text-stone-900 truncate">{selectedPhotoInfo.student.firstName} {selectedPhotoInfo.student.lastName}</h4>
+                                <div className="text-sm font-bold text-stone-400 mt-1 flex items-center justify-center sm:justify-start gap-2">
+                                    <span className="text-amber-500 uppercase tracking-widest bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
+                                        {selectedPhotoInfo.grade === 12 ? 'Group 3' : `Grade ${selectedPhotoInfo.grade}`}
+                                    </span>
+                                    <span className="truncate">{selectedPhotoInfo.student.school}</span>
+                                </div>
+                            </div>
+
+                            {selectedPhotoInfo.student.photo && (
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        const gradeName = selectedPhotoInfo.grade === 12 ? 'Group3' : `Grade${selectedPhotoInfo.grade}`;
+                                        const cleanStr = (s: string) => s.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+                                        const studentName = cleanStr(selectedPhotoInfo.student.firstName + selectedPhotoInfo.student.lastName);
+                                        const schoolName = cleanStr(selectedPhotoInfo.student.school || 'Unknown');
+
+                                        let ext = 'png';
+                                        if (selectedPhotoInfo.student.photo!.toLowerCase().includes('jpeg') || selectedPhotoInfo.student.photo!.toLowerCase().includes('jpg')) ext = 'jpg';
+
+                                        const fileName = `${gradeName}_${studentName}_${schoolName}.${ext}`;
+
+                                        setProcessing(true);
+                                        fetch(selectedPhotoInfo.student.photo!)
+                                            .then(res => res.blob())
+                                            .then(blob => {
+                                                const url = window.URL.createObjectURL(blob);
+                                                const link = document.createElement('a');
+                                                link.href = url;
+                                                link.download = fileName;
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                document.body.removeChild(link);
+                                                window.URL.revokeObjectURL(url);
+                                            })
+                                            .catch((err) => {
+                                                console.error("Download failed", err);
+                                                showToast('Browser prevented direct download. Opening in new tab.', 'error');
+                                                window.open(selectedPhotoInfo.student.photo!, '_blank');
+                                            })
+                                            .finally(() => setProcessing(false));
+                                    }}
+                                    disabled={processing}
+                                    className="flex-shrink-0 flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-4 sm:py-3 bg-amber-400 text-stone-900 font-black rounded-xl hover:bg-amber-300 hover:-translate-y-0.5 active:scale-95 transition-all shadow-md hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Download size={20} strokeWidth={2.5} />
+                                    Download
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </div>
     );
