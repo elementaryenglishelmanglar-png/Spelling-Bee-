@@ -7,64 +7,57 @@ const openrouterKey = import.meta.env.VITE_OPENROUTER_API_KEY as string | undefi
 
 const ai = geminiKey ? new GoogleGenAI({ apiKey: geminiKey }) : null;
 
-// ─── Rate-limit error with server-provided retry delay ────────────────────────
+// ─── Rate-limit error (carries server-provided retry delay) ──────────────────
 export class RateLimitError extends Error {
   retryAfterMs: number;
-  provider: "gemini" | "openrouter";
-  constructor(provider: "gemini" | "openrouter", retryAfterMs: number, message?: string) {
-    super(message ?? `${provider} rate-limited, retry after ${retryAfterMs}ms`);
-    this.provider = provider;
+  constructor(retryAfterMs: number, message?: string) {
+    super(message ?? `Rate-limited, retry after ${retryAfterMs}ms`);
     this.retryAfterMs = retryAfterMs;
   }
 }
 
-// Extract the Gemini-provided retryDelay (e.g. "44.45s") from error text
-function parseGeminiRetryMs(err: unknown): number {
-  const text = String(err instanceof Error ? err.message : err);
-  const match = text.match(/"retryDelay"\s*:\s*"([\d.]+)s"/);
-  if (match) return Math.ceil(parseFloat(match[1]) * 1000) + 5000; // +5s buffer
-  return 60_000; // default 60s if not found
-}
+// ─── Pool of free OpenRouter models (tried in order on rate-limit) ───────────
+// Each has an independent rate-limit quota, so spreading requests across them
+// avoids 429s on any single model.
+const OPENROUTER_MODELS = [
+  "upstage/solar-pro-3:free",
+  "google/gemini-2.0-flash-exp:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "deepseek/deepseek-chat-v3-0324:free",
+  "mistralai/mistral-7b-instruct:free",
+] as const;
 
-// ─── Shared prompt ────────────────────────────────────────────────────────────
+// ─── Prompt builder ───────────────────────────────────────────────────────────
 function buildPrompt(word: string, grade: GradeLevel): string {
   const isPreK = grade === 12;
-  const audienceDescription = isPreK
+  const audience = isPreK
     ? "a Pre-K / Preschool child aged 4-5 years old"
     : `a Grade ${grade} student (approximately ${grade + 5} years old)`;
 
   return `You are an educational assistant creating spelling bee flashcards.
 Word to define: "${word}"
 
-CRITICAL REQUIREMENT:
-The target audience is ${audienceDescription}.
-You MUST write the definition and example sentence at EXACTLY the right level.
+The target audience is ${audience}.
 ${isPreK
-      ? `This is a VERY YOUNG CHILD (4-5 years old). Use the SIMPLEST words possible.
-- Definition: 1 short sentence as if explaining to a toddler.
-- Example: A very short sentence about toys, animals, food, or family.
-- NEVER use complex vocabulary.`
-      : `Adjust for Grade ${grade}:
-- Grades 1-3: very simple, everyday objects.
-- Grades 4-6: school-level vocabulary.
-- Grades 7-9: academic vocabulary.
-- Grades 10-12: mature academic contexts.`
-    }
+      ? `Use the SIMPLEST words possible (4-5 year old level). One short sentence definition,
+one simple example sentence about toys, animals, food, or family.`
+      : `Adjust complexity for Grade ${grade}:
+Grades 1-3: simple everyday words. Grades 4-6: school-level. Grades 7-9: academic. Grades 10-12: advanced.`}
 
-Respond ONLY with a valid JSON object — no markdown, no extra text:
+Respond ONLY with valid JSON, no markdown fences:
 {"definition":"...","example":"...","partOfSpeech":"noun|verb|adjective|adverb|preposition|conjunction","theme":"1-3 word topic"}`;
 }
 
-// ─── Extract JSON from a string (handles ```json fences) ─────────────────────
+// ─── JSON extractor (handles ```json fences that some models add) ─────────────
 function extractJson(text: string): WordEnrichmentResponse {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("No JSON object found in response");
-  return JSON.parse(match[0]) as WordEnrichmentResponse;
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error(`No JSON in response: ${text.slice(0, 200)}`);
+  return JSON.parse(m[0]) as WordEnrichmentResponse;
 }
 
-// ─── Gemini ───────────────────────────────────────────────────────────────────
+// ─── Gemini call ──────────────────────────────────────────────────────────────
 async function callGemini(word: string, grade: GradeLevel): Promise<WordEnrichmentResponse> {
-  if (!geminiKey || !ai) throw new Error("Gemini API key missing");
+  if (!geminiKey || !ai) throw new RateLimitError(0, "Gemini API key missing");
 
   try {
     const response = await ai.models.generateContent({
@@ -84,95 +77,99 @@ async function callGemini(word: string, grade: GradeLevel): Promise<WordEnrichme
         },
       },
     });
-
     const text = response.text;
     if (!text) throw new Error("Empty Gemini response");
     return JSON.parse(text) as WordEnrichmentResponse;
-
   } catch (err) {
-    // Re-throw as RateLimitError if it's a 429 so the caller can handle it
     const msg = String(err instanceof Error ? err.message : err);
     if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("quota")) {
-      throw new RateLimitError("gemini", parseGeminiRetryMs(err), msg);
+      // Parse server-suggested retry delay e.g. "retryDelay":"44.45s"
+      const delayMatch = msg.match(/"retryDelay"\s*:\s*"([\d.]+)s"/);
+      const delayMs = delayMatch ? Math.ceil(parseFloat(delayMatch[1]) * 1000) + 3000 : 60_000;
+      throw new RateLimitError(delayMs, `Gemini 429 (wait ${Math.round(delayMs / 1000)}s)`);
     }
     throw err;
   }
 }
 
-// ─── OpenRouter (Solar Pro 3 – free) ─────────────────────────────────────────
-async function callOpenRouter(word: string, grade: GradeLevel): Promise<WordEnrichmentResponse> {
+// ─── Single OpenRouter model call ─────────────────────────────────────────────
+async function callOpenRouterModel(
+  model: string,
+  word: string,
+  grade: GradeLevel,
+): Promise<WordEnrichmentResponse> {
   if (!openrouterKey) throw new Error("OpenRouter API key missing");
 
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${openrouterKey}`,
+      Authorization: `Bearer ${openrouterKey}`,
       "Content-Type": "application/json",
       "HTTP-Referer": "https://spelling-bee-beryl.vercel.app/",
       "X-Title": "Spelling Bee Manager",
     },
     body: JSON.stringify({
-      model: "upstage/solar-pro-3:free",
+      model,
       messages: [{ role: "user", content: buildPrompt(word, grade) }],
     }),
   });
 
   if (!res.ok) {
     const retryHeader = res.headers.get("Retry-After");
-    const retryAfterMs = retryHeader ? (parseInt(retryHeader, 10) * 1000 + 5000) : 60_000;
+    const retryMs = retryHeader ? parseInt(retryHeader, 10) * 1000 + 3000 : 30_000;
     const body = await res.text().catch(() => "");
-    if (res.status === 429) {
-      throw new RateLimitError("openrouter", retryAfterMs, `OpenRouter 429: ${body}`);
-    }
-    throw new Error(`OpenRouter ${res.status}: ${body}`);
+    if (res.status === 429) throw new RateLimitError(retryMs, `${model} 429`);
+    throw new Error(`${model} ${res.status}: ${body}`);
   }
 
   const json = await res.json();
   const content: string = json?.choices?.[0]?.message?.content ?? "";
-  if (!content) throw new Error("Empty OpenRouter response");
+  if (!content) throw new Error(`Empty response from ${model}`);
   return extractJson(content);
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
-// Strategy:
-//  1. Try Gemini
-//  2. If Gemini rate-limits → immediately try OpenRouter
-//  3. If OpenRouter also rate-limits → throw a RateLimitError with
-//     retryAfterMs = max(geminiDelay, openrouterDelay)
-//     so ExcelImport waits the right amount before the next round.
+// ─── Public enrichment function ───────────────────────────────────────────────
+// Strategy: Gemini first → cycle through OpenRouter model pool on rate-limit.
+// Only throws if EVERY model in the pool is rate-limited; returns the max
+// wait time so ExcelImport can sleep exactly the right amount.
 export const enrichWordWithGemini = async (
   word: string,
   grade: GradeLevel,
 ): Promise<WordEnrichmentResponse> => {
 
-  let geminiRateLimit: RateLimitError | null = null;
+  let maxWaitMs = 0;
 
-  // ── Step 1: Gemini ──────────────────────────────────────────────────────────
+  // 1. Try Gemini
   try {
     return await callGemini(word, grade);
   } catch (err) {
     if (err instanceof RateLimitError) {
-      console.warn(`Gemini rate-limited (${err.retryAfterMs}ms). Trying OpenRouter…`);
-      geminiRateLimit = err;
+      console.warn(`[Gemini] rate-limited (${err.retryAfterMs}ms). Trying OpenRouter pool…`);
+      maxWaitMs = Math.max(maxWaitMs, err.retryAfterMs);
     } else {
-      // Non-rate-limit Gemini error → still try OpenRouter as best-effort
-      console.warn("Gemini error (non-rate-limit), trying OpenRouter:", err);
+      console.warn(`[Gemini] error, trying OpenRouter pool:`, err);
     }
   }
 
-  // ── Step 2: OpenRouter fallback ─────────────────────────────────────────────
-  try {
-    return await callOpenRouter(word, grade);
-  } catch (err) {
-    if (err instanceof RateLimitError) {
-      // Both rate-limited — propagate the longer wait time
-      const combinedWait = Math.max(
-        geminiRateLimit?.retryAfterMs ?? 60_000,
-        err.retryAfterMs,
-      );
-      throw new RateLimitError("openrouter", combinedWait,
-        `Both APIs rate-limited. Waiting ${Math.round(combinedWait / 1000)}s before retry.`);
+  // 2. Try each OpenRouter model in order
+  for (const model of OPENROUTER_MODELS) {
+    try {
+      console.log(`[OpenRouter] Trying ${model}…`);
+      return await callOpenRouterModel(model, word, grade);
+    } catch (err) {
+      if (err instanceof RateLimitError) {
+        console.warn(`[OpenRouter] ${model} rate-limited (${err.retryAfterMs}ms). Next model…`);
+        maxWaitMs = Math.max(maxWaitMs, err.retryAfterMs);
+      } else {
+        console.warn(`[OpenRouter] ${model} error, trying next:`, err);
+        // Non-rate-limit error — still try next model
+      }
     }
-    throw err;
   }
+
+  // All models exhausted — tell ExcelImport how long to wait before next round
+  throw new RateLimitError(
+    maxWaitMs || 60_000,
+    `All AI models rate-limited. Will retry after ${Math.round((maxWaitMs || 60_000) / 1000)}s.`,
+  );
 };
