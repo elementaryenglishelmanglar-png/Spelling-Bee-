@@ -6,6 +6,7 @@ export interface WordEntry {
   definition: string;
   example: string;
   grade: GradeLevel;
+  wordNumber?: number;  // Official word number (from Excel import)
   partOfSpeech?: 'noun' | 'verb' | 'adjective' | 'adverb' | 'preposition' | 'conjunction';
   theme?: string;
   image?: string; // Base64 string for word flashcard image

@@ -5,6 +5,7 @@ import { PracticeMode } from './views/PracticeMode'; // Teacher Session Mode
 import { HistoryView } from './views/HistoryView';
 import { WordList } from './components/WordList';
 import { WordForm } from './components/WordForm';
+import { ExcelImport } from './components/ExcelImport';
 import { WelcomeScreen } from './views/WelcomeScreen';
 import { StudentGenerator } from './views/StudentGenerator';
 import { StudentDrill } from './views/StudentDrill';
@@ -636,6 +637,7 @@ const AppContent: React.FC = () => {
                   </div>
                 </header>
                 <WordForm currentGrade={manageGrade} onAddWord={addWord} />
+                <ExcelImport currentGrade={manageGrade} onAddWord={addWord} />
                 <div className="bg-stone-200 h-px w-full my-6" />
                 <div className="space-y-4">
                   <h3 className="text-lg font-bold text-stone-700 flex items-center justify-between">

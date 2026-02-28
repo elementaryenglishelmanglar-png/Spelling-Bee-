@@ -232,8 +232,11 @@ const WordListItem: React.FC<WordListItemProps> = ({
   return (
     <div className="group flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center py-4 px-2 hover:bg-stone-100/50 transition-colors border-b border-stone-100 last:border-0">
       <div className="flex items-start gap-4 flex-1">
-        <div className="flex-shrink-0 w-8 h-8 bg-stone-100 text-stone-500 rounded-lg flex items-center justify-center font-black text-sm mt-1 border border-stone-200 shadow-sm">
-          {index + 1}
+        <div className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm mt-1 border shadow-sm
+          ${word.wordNumber ? 'bg-amber-400 text-stone-900 border-amber-300' : 'bg-stone-100 text-stone-500 border-stone-200'}`}
+          title={word.wordNumber ? `Official word #${word.wordNumber}` : 'Order by addition'}
+        >
+          {word.wordNumber ?? index + 1}
         </div>
 
         {word.image && (
