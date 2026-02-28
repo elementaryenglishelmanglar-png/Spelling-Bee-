@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { GradeLevel, WordEntry } from '../types';
-import { enrichWordWithGemini } from '../services/geminiService';
+import { enrichWordWithGemini, RateLimitError } from '../services/geminiService';
 import { FileSpreadsheet, Download, Upload, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '../lib/toastContext';
 
@@ -143,9 +143,9 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                         succeeded,
                         failed: 0,
                     });
-                } catch {
-                    // Both APIs failed — wait 30s then retry the pair
-                    const waitMs = 30000;
+                } catch (err) {
+                    // Use server-provided retry delay when available, else default 60s
+                    const waitMs = err instanceof RateLimitError ? err.retryAfterMs : 60_000;
                     setProgress(prev => prev ? { ...prev, waitingMs: waitMs, retrying: attempt + 1 } : null);
                     await sleep(waitMs);
                 }
