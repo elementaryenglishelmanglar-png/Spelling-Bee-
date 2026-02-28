@@ -23,6 +23,8 @@ interface ProgressState {
     currentWord: string;
     succeeded: number;
     failed: number;
+    retrying?: number;    // attempt number when retrying
+    waitingMs?: number;   // ms waiting before next retry
 }
 
 export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWord }) => {
@@ -94,24 +96,35 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
         }
 
         // ----------------------------------------------------------------
-        // Enrich each word with AI, one by one
+        // Enrich each word with AI — NEVER skip, retry until success
         // ----------------------------------------------------------------
-        // Gemini free tier: ~15 RPM → wait 4 seconds between calls
-        const DELAY_MS = 4000;
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+        // Time between words (6s ≈ 10 req/min, safely under the 15 RPM limit)
+        const BETWEEN_WORDS_MS = 6000;
 
         setStatus('enriching');
         let succeeded = 0;
-        let failed = 0;
 
         for (let i = 0; i < rows.length; i++) {
             if (abortRef.current) break;
 
             const { wordNumber, word } = rows[i];
-            setProgress({ current: i + 1, total: rows.length, currentWord: word, succeeded, failed });
+            let wordSaved = false;
+            let attempt = 0;
 
-            // Attempt with one retry on 429
-            for (let attempt = 0; attempt < 2; attempt++) {
+            // Keep retrying this word until it succeeds (or user cancels)
+            while (!wordSaved && !abortRef.current) {
+                attempt++;
+
+                setProgress({
+                    current: i + 1,
+                    total: rows.length,
+                    currentWord: word,
+                    succeeded,
+                    failed: 0,         // we never permanently fail a word
+                    retrying: attempt > 1 ? attempt : undefined,
+                });
+
                 try {
                     const enrichment = await enrichWordWithGemini(word, currentGrade);
                     const newWord: WordEntry = {
@@ -123,33 +136,41 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                     };
                     onAddWord(newWord);
                     succeeded++;
-                    break; // success → stop retry loop
-                } catch (err: any) {
-                    const is429 = String(err?.message ?? err).includes('429') || String(err?.status ?? '').includes('429');
-                    if (is429 && attempt === 0) {
-                        // Wait 12 seconds and retry once
-                        await sleep(12000);
-                    } else {
-                        failed++;
-                        break;
-                    }
+                    wordSaved = true;
+
+                    // Update progress to reflect success before moving on
+                    setProgress({
+                        current: i + 1,
+                        total: rows.length,
+                        currentWord: word,
+                        succeeded,
+                        failed: 0,
+                    });
+
+                } catch {
+                    // Wait longer with each retry: 30s, 60s, 90s ... capped at 2 min
+                    const waitMs = Math.min(30000 * attempt, 120000);
+                    setProgress(prev => prev ? {
+                        ...prev,
+                        waitingMs: waitMs,
+                        retrying: attempt + 1,
+                    } : null);
+                    await sleep(waitMs);
                 }
             }
 
-            setProgress({ current: i + 1, total: rows.length, currentWord: word, succeeded, failed });
-
-            // Rate-limit pause before next word (skip after last word)
+            // Pause between words to respect rate limits (skip pause after last word)
             if (i < rows.length - 1 && !abortRef.current) {
-                await sleep(DELAY_MS);
+                await sleep(BETWEEN_WORDS_MS);
             }
         }
 
         setStatus('done');
-        setProgress(prev => prev ? { ...prev, succeeded, failed } : null);
+        setProgress(prev => prev ? { ...prev, succeeded } : null);
         if (fileInputRef.current) fileInputRef.current.value = '';
 
         if (!abortRef.current) {
-            showToast(`Import complete: ${succeeded} word${succeeded !== 1 ? 's' : ''} added${failed > 0 ? `, ${failed} failed` : ''}!`, succeeded > 0 ? 'success' : 'error');
+            showToast(`Import complete: ${succeeded} word${succeeded !== 1 ? 's' : ''} added!`, 'success');
         }
     };
 
@@ -258,9 +279,16 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                                 {status === 'enriching' && (
                                     <div className="flex items-center gap-2 bg-stone-50 px-4 py-3 rounded-xl">
                                         <Loader2 size={15} className="animate-spin text-emerald-500 flex-shrink-0" />
-                                        <span className="text-sm text-stone-700 font-medium truncate">
-                                            Enriching: <span className="text-stone-900 font-bold">"{progress.currentWord}"</span>
-                                        </span>
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-sm text-stone-700 font-medium block truncate">
+                                                Enriching: <span className="text-stone-900 font-bold">"{progress.currentWord}"</span>
+                                            </span>
+                                            {progress.retrying && (
+                                                <span className="text-xs text-amber-600 font-semibold">
+                                                    Rate limit hit — waiting {progress.waitingMs ? Math.round(progress.waitingMs / 1000) : '?'}s before retry #{progress.retrying}…
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
