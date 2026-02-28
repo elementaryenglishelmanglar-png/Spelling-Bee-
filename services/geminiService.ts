@@ -14,11 +14,24 @@ export const enrichWordWithGemini = async (word: string, grade: GradeLevel): Pro
 
   const model = "gemini-2.5-flash";
 
+  // Approximate age calculation based on grade (Grade 1 ~ 6yo, Grade 12 ~ 17yo)
+  const estimatedAge = grade === 12 ? "17-18" : `${grade + 5}`;
+
   const prompt = `
-    Provide a clear definition and a simple example sentence for the spelling bee word: "${word}".
-    The target audience is a Grade ${grade} student.
-    Classify the Part of Speech of this word (noun, verb, adjective, adverb, preposition, conjunction).
-    Also provide a short 1-3 word "theme" for this word (e.g., "Science", "Daily Life", "Animals", "Emotions").
+    You are an educational assistant creating spelling bee flashcards.
+    Word to define: "${word}"
+
+    CRITICAL REQUIREMENT: 
+    The target audience is a Grade ${grade} student (approximately ${estimatedAge} years old). 
+    You MUST adjust the vocabulary, tone, and complexity of BOTH the definition and the example sentence to perfectly match this age group's comprehension level.
+    - If it's for young kids (e.g., Grades 1-3), use very simple words, short sentences, and concepts they see every day (like toys, school, pets).
+    - If it's for older students (e.g., Grades 9-12), use appropriately mature academic or real-world contexts and more advanced vocabulary.
+
+    Tasks:
+    1. Provide a clear definition.
+    2. Provide a single example sentence using the word in context.
+    3. Classify the Part of Speech (noun, verb, adjective, adverb, preposition, conjunction).
+    4. Provide a short 1-3 word "theme" (e.g., "Science", "Daily Life", "Animals", "Emotions").
   `;
 
   try {
