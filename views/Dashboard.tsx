@@ -347,7 +347,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ words, sessions, onChangeV
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="h-64 w-full min-h-[200px]">
               <h4 className="text-xs font-bold text-stone-500 uppercase mb-2 text-center">Avg Letters per Word</h4>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={300}>
                 <LineChart data={wordStatsByGrade} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} width={30} />

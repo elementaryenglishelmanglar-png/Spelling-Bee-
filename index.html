@@ -1,113 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Spelling Bee Manager - El Manglar</title>
-    
-    <!-- PWA Meta Tags -->
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#f59e0b">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Spelling Bee">
-    <link rel="icon" type="image/png" href="/favicon.png">
-    <link rel="apple-touch-icon" href="/favicon.png">
 
-    <!-- Google Fonts: Playfair Display (Serif) + Inter (Sans-Serif) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spelling Bee Manager - El Manglar</title>
 
-    <!-- Tailwind CDN with custom Premium Hive config -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-              serif: ['Playfair Display', 'ui-serif', 'Georgia', 'serif'],
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#f59e0b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Spelling Bee">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+
+  <!-- Google Fonts: Playfair Display (Serif) + Inter (Sans-Serif) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Tailwind CDN with custom Premium Hive config -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            serif: ['Playfair Display', 'ui-serif', 'Georgia', 'serif'],
+          },
+          colors: {
+            amber: {
+              50: '#fffbeb',
+              100: '#fef3c7',
+              200: '#fde68a',
+              300: '#fcd34d',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309',
+              800: '#92400e',
+              900: '#78350f',
             },
-            colors: {
-              amber: {
-                50:  '#fffbeb',
-                100: '#fef3c7',
-                200: '#fde68a',
-                300: '#fcd34d',
-                400: '#fbbf24',
-                500: '#f59e0b',
-                600: '#d97706',
-                700: '#b45309',
-                800: '#92400e',
-                900: '#78350f',
-              },
-            },
-            animation: {
-              'bounce-slow': 'bounce 3s ease-in-out infinite',
-              'fade-in': 'fadeIn 0.6s ease-out both',
-            },
-            keyframes: {
-              fadeIn: {
-                '0%': { opacity: '0', transform: 'translateY(8px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              },
+          },
+          animation: {
+            'bounce-slow': 'bounce 3s ease-in-out infinite',
+            'fade-in': 'fadeIn 0.6s ease-out both',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0', transform: 'translateY(8px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
             },
           },
         },
-      };
-    </script>
+      },
+    };
+  </script>
 
-    <style>
-      /* ========================================
+  <style>
+    /* ========================================
          PREMIUM HIVE - Global CSS
          ======================================== */
 
-      /* Typography */
-      body {
-        font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
+    /* Typography */
+    body {
+      font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 
-      h1, h2, h3 {
-        font-family: 'Playfair Display', ui-serif, Georgia, serif;
-      }
+    h1,
+    h2,
+    h3 {
+      font-family: 'Playfair Display', ui-serif, Georgia, serif;
+    }
 
-      /* Custom scrollbar */
-      ::-webkit-scrollbar { width: 8px; }
-      ::-webkit-scrollbar-track { background: #f5f5f4; }
-      ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 4px; }
-      ::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
 
-      /* Smooth transitions */
-      html { scroll-behavior: smooth; }
-      body { transition: background-color 0.3s ease; }
+    ::-webkit-scrollbar-track {
+      background: #f5f5f4;
+    }
 
-      /* Honeycomb SVG pattern – very subtle (5% opacity) */
-      .honeycomb-bg {
-        position: relative;
-      }
-      .honeycomb-bg::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66zM28 98L0 82V50L28 34l28 16v32L28 98z' fill='none' stroke='%23000000' stroke-width='1'/%3E%3C/svg%3E");
-        background-size: 56px 100px;
-        opacity: 0.04;
-        pointer-events: none;
-        z-index: 0;
-      }
-      .honeycomb-bg > * {
-        position: relative;
-        z-index: 1;
-      }
+    ::-webkit-scrollbar-thumb {
+      background: #d6d3d1;
+      border-radius: 4px;
+    }
 
-      /* Ensure h1/h2 use serif font even inside Tailwind components */
-      .font-serif-title {
-        font-family: 'Playfair Display', ui-serif, Georgia, serif;
-      }
-    </style>
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a8a29e;
+    }
+
+    /* Smooth transitions */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      transition: background-color 0.3s ease;
+    }
+
+    /* Honeycomb SVG pattern – very subtle (5% opacity) */
+    .honeycomb-bg {
+      position: relative;
+    }
+
+    .honeycomb-bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66zM28 98L0 82V50L28 34l28 16v32L28 98z' fill='none' stroke='%23000000' stroke-width='1'/%3E%3C/svg%3E");
+      background-size: 56px 100px;
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .honeycomb-bg>* {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Ensure h1/h2 use serif font even inside Tailwind components */
+    .font-serif-title {
+      font-family: 'Playfair Display', ui-serif, Georgia, serif;
+    }
+  </style>
 
   <script type="importmap">
 {
@@ -121,22 +146,22 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-stone-50 text-stone-900">
-    <div id="root"></div>
+
+<body class="bg-stone-50 text-stone-900">
+  <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
-  
+
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then((registration) => {
-          console.log('ServiceWorker registration successful with scope: ', registration.scope);
-        }).catch((error) => {
-          console.log('ServiceWorker registration failed: ', error);
+        navigator.serviceWorker.register('/sw.js').catch((error) => {
+          console.error('ServiceWorker registration failed:', error);
         });
       });
     }
   </script>
 </body>
+
 </html>
