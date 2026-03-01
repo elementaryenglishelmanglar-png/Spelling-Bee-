@@ -29,9 +29,28 @@ function isDataUrl(s: string): boolean {
 // --- Words
 export async function fetchWords(): Promise<WordEntry[]> {
   if (!isSupabaseConfigured()) return [];
-  const { data, error } = await supabase.from('words').select('*').order('created_at', { ascending: true });
-  if (error) throw error;
-  return (data ?? []).map((row: any) => ({
+
+  const PAGE_SIZE = 1000;
+  let allRows: any[] = [];
+  let from = 0;
+  let hasMore = true;
+
+  // Paginate to get ALL rows — PostgREST defaults to 1000 max per request
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('words')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) throw error;
+    const page = data ?? [];
+    allRows = allRows.concat(page);
+    hasMore = page.length === PAGE_SIZE;
+    from += PAGE_SIZE;
+  }
+
+  return allRows.map((row: any) => ({
     id: row.id,
     word: row.word,
     definition: row.definition,
