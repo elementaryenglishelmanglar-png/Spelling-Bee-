@@ -1,8 +1,10 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { WordEntry, GradeLevel } from '../types';
-import { Trash2, Volume2, Edit2, Check, X, Image as ImageIcon, Search, Filter, Download, Upload, Mic } from 'lucide-react';
+import { Trash2, Volume2, Edit2, Check, X, Image as ImageIcon, Search, Filter, Download, Upload, Mic, Sparkles, Loader2 } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { supabase } from '../lib/supabase';
+import { enrichWordWithGemini } from '../services/geminiService';
+import { generateAndUploadAudio } from '../services/audioService';
 
 interface WordListProps {
   words: WordEntry[];
@@ -28,17 +30,48 @@ const WordListItem: React.FC<WordListItemProps> = ({
   const [editForm, setEditForm] = useState(word);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [isAIFilling, setIsAIFilling] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
     onUpdate(editForm);
     setIsEditing(false);
+    setAiError(null);
   };
 
   const handleCancel = () => {
     setEditForm(word);
     setIsEditing(false);
+    setAiError(null);
+  };
+
+  const handleAIFill = async () => {
+    setIsAIFilling(true);
+    setAiError(null);
+    try {
+      const enrichment = await enrichWordWithGemini(editForm.word, editForm.grade);
+      setEditForm(prev => ({ ...prev, ...enrichment }));
+    } catch (err: any) {
+      setAiError(err?.message ?? 'AI fill failed');
+    } finally {
+      setIsAIFilling(false);
+    }
+  };
+
+  const handleGenerateAudio = async () => {
+    setIsGeneratingAudio(true);
+    setAiError(null);
+    try {
+      const publicUrl = await generateAndUploadAudio(editForm.word);
+      setEditForm(prev => ({ ...prev, audioUrl: publicUrl }));
+    } catch (err: any) {
+      setAiError(err?.message ?? 'Audio generation failed');
+    } finally {
+      setIsGeneratingAudio(false);
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,6 +190,16 @@ const WordListItem: React.FC<WordListItemProps> = ({
                   <Upload size={14} /> {editForm.audioUrl ? 'Replace Audio' : 'Upload Audio'}
                 </button>
                 {isUploadingAudio && <span className="text-xs text-stone-400 animate-pulse">Uploading...</span>}
+                <button
+                  onClick={handleGenerateAudio}
+                  disabled={isGeneratingAudio || isUploadingAudio || !editForm.word.trim()}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 hover:bg-violet-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-colors"
+                  title="Generate AI pronunciation audio (ElevenLabs)"
+                >
+                  {isGeneratingAudio
+                    ? <><Loader2 size={13} className="animate-spin" /> Generating…</>
+                    : <><Sparkles size={13} /> AI Audio</>}
+                </button>
                 {editForm.audioUrl && !isUploadingAudio && (
                   <div className="flex items-center gap-2 bg-green-50 px-2 py-1 rounded border border-green-200 text-green-700 text-xs">
                     <span className="font-bold">Audio Set</span>
@@ -172,6 +215,21 @@ const WordListItem: React.FC<WordListItemProps> = ({
                 onChange={handleAudioUpload}
               />
             </div>
+
+            {/* AI Fill Button */}
+            <button
+              onClick={handleAIFill}
+              disabled={isAIFilling || !editForm.word.trim()}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold transition-colors w-full justify-center"
+            >
+              {isAIFilling
+                ? <><Loader2 size={13} className="animate-spin" /> Generating with AI…</>
+                : <><Sparkles size={13} /> AI Auto-Fill Definition & Example</>}
+            </button>
+
+            {aiError && (
+              <p className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{aiError}</p>
+            )}
 
             <div>
               <label className="text-xs font-bold text-stone-500 uppercase">Definition</label>
