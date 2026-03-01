@@ -7,7 +7,7 @@ import { useToast } from '../lib/toastContext';
 
 interface ExcelImportProps {
     currentGrade: GradeLevel;
-    onAddWord: (word: WordEntry) => void;
+    onAddWord: (word: WordEntry) => Promise<void>;
 }
 
 interface WordRow {
@@ -107,6 +107,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
 
         setStatus('enriching');
         let succeeded = 0;
+        let failed = 0;
 
         for (let i = 0; i < rows.length; i++) {
             if (abortRef.current) break;
@@ -122,7 +123,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                     total: rows.length,
                     currentWord: word,
                     succeeded,
-                    failed: 0,
+                    failed,
                     retrying: attempt > 1 ? attempt : undefined,
                 });
 
@@ -136,7 +137,8 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                         wordNumber,
                         ...enrichment,
                     };
-                    onAddWord(newWord);
+                    // Await the save so DB errors are caught and reported
+                    await onAddWord(newWord);
                     succeeded++;
                     wordSaved = true;
                     setProgress({
@@ -144,7 +146,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                         total: rows.length,
                         currentWord: word,
                         succeeded,
-                        failed: 0,
+                        failed,
                     });
                 } catch (err) {
                     if (err instanceof RateLimitError) {
@@ -169,8 +171,27 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                         });
                         setStatus('enriching');
                     } else {
-                        // Non-rate-limit error — wait a short time and retry
-                        await sleep(15_000);
+                        // Distinguish between AI enrichment errors and DB save errors.
+                        // If it's a save error (not a RateLimitError, but still failed),
+                        // mark word as failed and move on — don't retry forever.
+                        const errMsg = err instanceof Error ? err.message : String(err);
+                        const isSaveError = errMsg.includes('duplicate') ||
+                            errMsg.includes('violates') ||
+                            errMsg.includes('constraint') ||
+                            errMsg.includes('foreign key') ||
+                            errMsg.includes('unique') ||
+                            errMsg.includes('check');
+
+                        if (isSaveError) {
+                            // DB constraint or save error — skip this word
+                            console.error(`[ExcelImport] DB save failed for "${word}":`, errMsg);
+                            failed++;
+                            wordSaved = true; // exit the while loop
+                            setProgress(prev => prev ? { ...prev, failed } : null);
+                        } else {
+                            // Other transient error (network, AI parsing) — wait and retry
+                            await sleep(15_000);
+                        }
                     }
                 }
             }
@@ -181,11 +202,15 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
         }
 
         setStatus('done');
-        setProgress(prev => prev ? { ...prev, succeeded } : null);
+        setProgress(prev => prev ? { ...prev, succeeded, failed } : null);
         if (fileInputRef.current) fileInputRef.current.value = '';
 
         if (!abortRef.current) {
-            showToast(`Import complete: ${succeeded} word${succeeded !== 1 ? 's' : ''} added!`, 'success');
+            if (failed > 0) {
+                showToast(`Import complete: ${succeeded} added, ${failed} failed (check DB constraints or duplicate words).`, 'warning');
+            } else {
+                showToast(`Import complete: ${succeeded} word${succeeded !== 1 ? 's' : ''} added!`, 'success');
+            }
         }
     };
 

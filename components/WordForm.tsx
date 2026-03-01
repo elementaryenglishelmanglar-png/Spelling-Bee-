@@ -6,7 +6,7 @@ import { useToast } from '../lib/toastContext';
 
 interface WordFormProps {
   currentGrade: GradeLevel;
-  onAddWord: (word: WordEntry) => void;
+  onAddWord: (word: WordEntry) => Promise<void>;
 }
 
 export const WordForm: React.FC<WordFormProps> = ({ currentGrade, onAddWord }) => {
@@ -41,7 +41,7 @@ export const WordForm: React.FC<WordFormProps> = ({ currentGrade, onAddWord }) =
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleManualAdd = (e: React.FormEvent) => {
+  const handleManualAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputWord.trim()) return;
 
@@ -56,7 +56,7 @@ export const WordForm: React.FC<WordFormProps> = ({ currentGrade, onAddWord }) =
       theme: 'General',
       image: image || undefined
     };
-    onAddWord(newWord);
+    await onAddWord(newWord);
     resetForm();
   };
 
@@ -79,11 +79,11 @@ export const WordForm: React.FC<WordFormProps> = ({ currentGrade, onAddWord }) =
         image: image || undefined,
         ...enrichment
       };
-      onAddWord(newWord);
+      await onAddWord(newWord);
       resetForm();
-      showToast(`Word "${inputWord.trim()}" enriched with AI successfully!`, 'success');
+      showToast(`Word "${inputWord.trim()}" added successfully!`, 'success');
     } catch (err) {
-      const errorMsg = "Failed to fetch AI data. Check API key or internet.";
+      const errorMsg = err instanceof Error ? err.message : "Failed to add word.";
       setError(errorMsg);
       showToast(errorMsg, 'error');
     } finally {

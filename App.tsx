@@ -228,15 +228,14 @@ const AppContent: React.FC = () => {
       try {
         const added = await addWordToSupabase(newWord);
         setWords(prev => [...prev, added]);
-        showToast(`Word "${newWord.word}" added successfully`, 'success');
       } catch (e) {
         const errorMsg = e instanceof Error ? e.message : 'Failed to add word';
-        showToast(errorMsg, 'error');
+        showToast(`Failed to save "${newWord.word}": ${errorMsg}`, 'error');
         console.error('Failed to add word', e);
+        throw e; // Re-throw so ExcelImport can detect and count the failure
       }
     } else {
       setWords(prev => [...prev, newWord]);
-      showToast(`Word "${newWord.word}" added successfully`, 'success');
     }
   };
 
