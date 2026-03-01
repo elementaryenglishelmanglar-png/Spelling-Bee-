@@ -15,7 +15,7 @@ interface WordRow {
     word: string;
 }
 
-type ImportStatus = 'idle' | 'parsing' | 'enriching' | 'done';
+type ImportStatus = 'idle' | 'parsing' | 'enriching' | 'quota_waiting' | 'done';
 
 interface ProgressState {
     current: number;
@@ -23,8 +23,9 @@ interface ProgressState {
     currentWord: string;
     succeeded: number;
     failed: number;
-    retrying?: number;    // attempt number when retrying
-    waitingMs?: number;   // ms waiting before next retry
+    retrying?: number;
+    waitingMs?: number;
+    quotaResetMs?: number;  // countdown until all-API quota resets
 }
 
 export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWord }) => {
@@ -33,7 +34,9 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
     const [status, setStatus] = useState<ImportStatus>('idle');
     const [progress, setProgress] = useState<ProgressState | null>(null);
     const [showModal, setShowModal] = useState(false);
+    const [quotaSecsLeft, setQuotaSecsLeft] = useState(0);
     const abortRef = useRef(false);
+    const quotaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // -------------------------------------------------------------------
     // Download a template .xlsx with 200 rows (number + empty word column)
@@ -144,10 +147,31 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                         failed: 0,
                     });
                 } catch (err) {
-                    // Use server-provided retry delay when available, else default 60s
-                    const waitMs = err instanceof RateLimitError ? err.retryAfterMs : 60_000;
-                    setProgress(prev => prev ? { ...prev, waitingMs: waitMs, retrying: attempt + 1 } : null);
-                    await sleep(waitMs);
+                    if (err instanceof RateLimitError) {
+                        // All models are rate-limited — show countdown then retry
+                        const waitMs = err.retryAfterMs || 60_000;
+                        const waitSecs = Math.ceil(waitMs / 1000);
+                        setStatus('quota_waiting');
+                        setQuotaSecsLeft(waitSecs);
+
+                        // Tick-countdown every second so user sees progress
+                        await new Promise<void>(resolve => {
+                            let remaining = waitSecs;
+                            quotaTimerRef.current = setInterval(() => {
+                                remaining--;
+                                setQuotaSecsLeft(remaining);
+                                if (remaining <= 0 || abortRef.current) {
+                                    clearInterval(quotaTimerRef.current!);
+                                    quotaTimerRef.current = null;
+                                    resolve();
+                                }
+                            }, 1000);
+                        });
+                        setStatus('enriching');
+                    } else {
+                        // Non-rate-limit error — wait a short time and retry
+                        await sleep(15_000);
+                    }
                 }
             }
 
@@ -167,9 +191,11 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
 
     const handleClose = () => {
         abortRef.current = true;
+        if (quotaTimerRef.current) clearInterval(quotaTimerRef.current);
         setShowModal(false);
         setStatus('idle');
         setProgress(null);
+        setQuotaSecsLeft(0);
     };
 
     const gradeName = currentGrade === 12 ? 'Group 3' : `Grade ${currentGrade}`;
@@ -240,6 +266,54 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ currentGrade, onAddWor
                             <div className="flex items-center gap-3 text-stone-600">
                                 <Loader2 size={20} className="animate-spin text-emerald-500" />
                                 <span className="text-sm font-medium">Reading file…</span>
+                            </div>
+                        )}
+
+                        {status === 'quota_waiting' && progress && (
+                            <div className="space-y-4">
+                                {/* Progress bar (frozen at current position) */}
+                                <div>
+                                    <div className="flex justify-between text-xs text-stone-500 mb-1.5">
+                                        <span>Word {progress.current} of {progress.total}</span>
+                                        <span>{Math.round((progress.current / progress.total) * 100)}%</span>
+                                    </div>
+                                    <div className="h-2.5 bg-stone-100 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-amber-400 to-amber-300 rounded-full transition-all duration-300"
+                                            style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Quota exhausted message */}
+                                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <AlertCircle size={18} className="text-amber-500 flex-shrink-0" />
+                                        <p className="text-sm font-bold text-amber-800">All AI models are rate-limited</p>
+                                    </div>
+                                    <p className="text-xs text-amber-700">
+                                        All 5 free AI models have reached their hourly request quota simultaneously.
+                                        The import will <strong>automatically resume</strong> when the cooldown ends.
+                                    </p>
+                                    <div className="flex items-center justify-center gap-3 pt-2">
+                                        <div className="text-center">
+                                            <p className="text-4xl font-black text-amber-700 tabular-nums">{quotaSecsLeft}</p>
+                                            <p className="text-xs text-amber-600 font-medium uppercase tracking-wider">seconds</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Added so far */}
+                                <div className="flex items-center gap-2 bg-emerald-50 px-4 py-3 rounded-xl">
+                                    <CheckCircle size={16} className="text-emerald-500 flex-shrink-0" />
+                                    <span className="text-sm text-emerald-700">
+                                        <strong>{progress.succeeded}</strong> word{progress.succeeded !== 1 ? 's' : ''} saved so far
+                                    </span>
+                                </div>
+
+                                <button onClick={handleClose} className="w-full py-2.5 border border-stone-200 text-stone-500 font-semibold rounded-xl hover:bg-stone-50 text-sm transition-colors">
+                                    Cancel import
+                                </button>
                             </div>
                         )}
 
