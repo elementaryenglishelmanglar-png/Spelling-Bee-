@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { WordEntry, GradeLevel, StudentProfile } from '../types';
 import { getGradeLabel } from '../lib/gradeLabel';
 import { Volume2, CheckCircle, XCircle, ChevronRight, Trophy, Shuffle, Heart, HeartCrack } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { recordStudentStat, addCoins, checkAndUpdateStreak, fetchStudentWordStats } from '../services/supabaseData';
 import confetti from 'canvas-confetti';
 
@@ -268,8 +269,8 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
             <button
               onClick={() => setPracticeMode('spelling')}
               className={`p-5 rounded-2xl border-2 transition-all group ${practiceMode === 'spelling'
-                  ? 'bg-amber-50 border-amber-500 shadow-md scale-[1.02]'
-                  : 'bg-white text-stone-600 border-stone-100 hover:border-amber-200'
+                ? 'bg-amber-50 border-amber-500 shadow-md scale-[1.02]'
+                : 'bg-white text-stone-600 border-stone-100 hover:border-amber-200'
                 }`}
             >
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors ${practiceMode === 'spelling' ? 'bg-amber-500 text-white' : 'bg-stone-100 text-stone-400 group-hover:bg-amber-50 group-hover:text-amber-500'
@@ -282,8 +283,8 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
             <button
               onClick={() => setPracticeMode('anagram')}
               className={`p-5 rounded-2xl border-2 transition-all group ${practiceMode === 'anagram'
-                  ? 'bg-stone-900 border-stone-900 shadow-md scale-[1.02]'
-                  : 'bg-white text-stone-600 border-stone-100 hover:border-stone-300'
+                ? 'bg-stone-900 border-stone-900 shadow-md scale-[1.02]'
+                : 'bg-white text-stone-600 border-stone-100 hover:border-stone-300'
                 }`}
             >
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors ${practiceMode === 'anagram' ? 'bg-amber-400 text-stone-900' : 'bg-stone-100 text-stone-400 group-hover:bg-stone-800 group-hover:text-white'
@@ -410,14 +411,16 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                         </div>
                       ) : (
                         shuffledLetters.map((letter, index) => (
-                          <button
+                          <motion.button
                             key={`${letter}-${index}`}
                             type="button"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => handleLetterClick(letter, index)}
-                            className="w-11 h-11 bg-stone-50 border border-stone-200 border-b-[3px] border-b-stone-300 rounded-lg font-black text-lg text-stone-800 shadow-sm hover:border-b-amber-400 hover:bg-white hover:-translate-y-1 transition-all active:translate-y-0 active:border-b active:shadow-none select-none"
+                            className="w-11 h-11 bg-stone-50 border border-stone-200 border-b-[3px] border-b-stone-300 rounded-lg font-black text-lg text-stone-800 shadow-sm hover:border-b-amber-400 hover:bg-white transition-all select-none"
                           >
                             {letter.toUpperCase()}
-                          </button>
+                          </motion.button>
                         ))
                       )}
                     </div>
@@ -428,14 +431,16 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 text-center">Your Answer</p>
                     <div className="flex flex-wrap justify-center gap-2 min-h-[56px] p-3 rounded-2xl border-2 border-dashed border-stone-200">
                       {selectedLetters.map((letter, index) => (
-                        <button
+                        <motion.button
                           key={`sel-${index}`}
                           type="button"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           onClick={() => handleRemoveLetter(index)}
-                          className="w-11 h-11 bg-stone-900 text-amber-400 border-b-[3px] border-b-stone-700 rounded-lg font-black text-lg shadow-md hover:bg-stone-800 transition-all active:translate-y-0.5 active:border-b active:shadow-none select-none"
+                          className="w-11 h-11 bg-stone-900 text-amber-400 border-b-[3px] border-b-stone-700 rounded-lg font-black text-lg shadow-md hover:bg-stone-800 transition-all select-none"
                         >
                           {letter.toUpperCase()}
-                        </button>
+                        </motion.button>
                       ))}
                       {selectedLetters.length === 0 && (
                         <div className="w-full text-center py-3 text-stone-300 text-sm italic">
@@ -471,13 +476,15 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                 </div>
               )}
 
-              <button
+              <motion.button
                 type="submit"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 disabled={!userInput.trim()}
-                className="w-full py-4 bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-stone-900 rounded-2xl font-bold shadow-md shadow-amber-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-stone-900 rounded-2xl font-bold shadow-md shadow-amber-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Check Answer
-              </button>
+              </motion.button>
             </form>
           ) : (
             <div className="animate-fade-in">

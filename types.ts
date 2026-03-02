@@ -137,7 +137,7 @@ export interface SchoolResource {
   createdAt: string;
 }
 
-export type ViewState = 'dashboard' | 'session' | 'history' | 'manage' | 'students' | 'student-generator' | 'student-drill' | 'leaderboard' | 'manage-sponsors' | 'manage-vendors';
+export type ViewState = 'dashboard' | 'session' | 'history' | 'manage' | 'students' | 'student-generator' | 'student-drill' | 'leaderboard' | 'manage-sponsors' | 'manage-vendors' | 'live-display' | 'live-control';
 
 export interface Sponsor {
   id: string;

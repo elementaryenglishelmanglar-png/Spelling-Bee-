@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { StudentProfile, GradeLevel } from '../types';
 import { fetchLeaderboard } from '../services/supabaseData';
-import { Trophy, Medal, Award, Filter, Crown, Shield, Star } from 'lucide-react';
+import { Trophy, Medal, Award, Filter, Crown, Shield, Star, Crown as CrownIcon, Hexagon, ShieldAlert, Target } from 'lucide-react';
+import { LeagueBadge, LEAGUE_META } from './LiveEventDisplay';
 
 type League = 'Diamond' | 'Platinum' | 'Gold' | 'Bronze' | 'Iron' | 'Paper' | 'All';
 
 // ── League config table ────────────────────────────────────────────────────
-const LEAGUES: { id: League; emoji: string; label: string }[] = [
-    { id: 'All', emoji: '', label: 'Global' },
-    { id: 'Diamond', emoji: '💎', label: 'Diamond' },
-    { id: 'Platinum', emoji: '🪨', label: 'Platinum' },
-    { id: 'Gold', emoji: '🥇', label: 'Gold' },
-    { id: 'Bronze', emoji: '🥉', label: 'Bronze' },
-    { id: 'Iron', emoji: '🔩', label: 'Iron' },
-    { id: 'Paper', emoji: '📄', label: 'Paper' },
+const LEAGUES: { id: League; label: string }[] = [
+    { id: 'All', label: 'Global' },
+    { id: 'Diamond', label: 'Diamond' },
+    { id: 'Platinum', label: 'Platinum' },
+    { id: 'Gold', label: 'Gold' },
+    { id: 'Bronze', label: 'Bronze' },
+    { id: 'Iron', label: 'Iron' },
+    { id: 'Paper', label: 'Paper' },
 ];
 
 // ── League card visual styles ──────────────────────────────────────────────
@@ -43,17 +44,7 @@ const getCardStyle = (league: League) => {
 };
 
 // ── League badge (inline pill on the card) ─────────────────────────────────
-const getLeagueBadgeStyle = (league: League) => {
-    switch (league) {
-        case 'Diamond': return 'bg-slate-100 text-slate-600 border border-slate-300';
-        case 'Platinum': return 'bg-stone-100 text-stone-600 border border-stone-300';
-        case 'Gold': return 'bg-amber-100 text-amber-700 border border-amber-300';
-        case 'Bronze': return 'bg-orange-100 text-orange-700 border border-orange-200';
-        case 'Iron': return 'bg-stone-200 text-stone-600 border border-stone-300';
-        case 'Paper': return 'bg-stone-50 text-stone-400 border border-dashed border-stone-200';
-        default: return 'bg-white text-stone-500 border border-stone-100';
-    }
-};
+// Removed getLeagueBadgeStyle as we're using LeagueBadge now
 
 // ── Left-accent colour per league ─────────────────────────────────────────
 const getAccentBorder = (league: League) => {
@@ -227,28 +218,31 @@ export const Leaderboard: React.FC = () => {
 
                 {/* League pills — wrapping flex row */}
                 <div className="flex flex-wrap justify-center gap-2">
-                    {LEAGUES.map(({ id, emoji, label }) => (
-                        <button
-                            key={id}
-                            onClick={() => setSelectedLeague(id)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border active:scale-95
-                                ${selectedLeague === id
-                                    ? 'bg-stone-900 text-white border-stone-900 shadow-md scale-105'
-                                    : 'bg-stone-100 text-stone-500 border-stone-200 shadow-sm hover:bg-white hover:border-stone-300 hover:text-stone-700'}`}
-                        >
-                            {emoji && <span>{emoji}</span>}
-                            {label}
-                        </button>
-                    ))}
+                    {LEAGUES.map(({ id, label }) => {
+                        const Icon = id !== 'All' ? LEAGUE_META[id as Exclude<League, 'All'>].icon : Trophy;
+                        return (
+                            <button
+                                key={id}
+                                onClick={() => setSelectedLeague(id)}
+                                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all border active:scale-95
+                                    ${selectedLeague === id
+                                        ? 'bg-stone-900 text-white border-stone-900 shadow-md scale-105'
+                                        : 'bg-stone-100 text-stone-500 border-stone-200 shadow-sm hover:bg-white hover:border-stone-300 hover:text-stone-700'}`}
+                            >
+                                <Icon size={14} className={selectedLeague === id ? 'text-amber-400' : 'text-stone-400'} />
+                                {label}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* XP thresholds legend */}
                 <div className="text-center text-[10px] text-stone-400 flex flex-wrap justify-center gap-3">
-                    <span className="font-semibold text-slate-500">💎 100k+</span>
-                    <span className="font-semibold text-stone-500">🪨 50k+</span>
-                    <span className="font-semibold text-amber-600">🥇 20k+</span>
-                    <span className="font-semibold text-orange-500">🥉 5k+</span>
-                    <span className="font-semibold text-stone-500">🔩 1k+</span>
+                    <span className="font-semibold text-slate-500 flex items-center gap-1"><CrownIcon size={10} /> 100k+</span>
+                    <span className="font-semibold text-stone-500 flex items-center gap-1"><Hexagon size={10} /> 50k+</span>
+                    <span className="font-semibold text-amber-600 flex items-center gap-1"><Star size={10} /> 20k+</span>
+                    <span className="font-semibold text-orange-500 flex items-center gap-1"><ShieldAlert size={10} /> 5k+</span>
+                    <span className="font-semibold text-stone-500 flex items-center gap-1"><Shield size={10} /> 1k+</span>
                 </div>
             </div>
 
@@ -289,13 +283,13 @@ export const Leaderboard: React.FC = () => {
 
                             {/* Info */}
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
+                                <div className="flex items-center gap-3 flex-wrap">
                                     <h3 className="font-bold text-stone-900 truncate text-sm">
                                         {student.firstName} {student.lastName}
                                     </h3>
-                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${getLeagueBadgeStyle(student.league as League)}`}>
-                                        {student.league}
-                                    </span>
+                                    <div className="scale-75 origin-left">
+                                        <LeagueBadge league={student.league as League} />
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-stone-400 mt-0.5">
                                     <span className="bg-stone-100 px-1.5 py-0.5 rounded text-stone-500 font-medium text-[10px]">
@@ -330,13 +324,13 @@ export const Leaderboard: React.FC = () => {
                             </div>
                             <Avatar student={student} />
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
+                                <div className="flex items-center gap-3 flex-wrap">
                                     <h3 className="font-bold text-stone-900 truncate text-sm">
                                         {student.firstName} {student.lastName}
                                     </h3>
-                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${getLeagueBadgeStyle(student.league as League)}`}>
-                                        {student.league}
-                                    </span>
+                                    <div className="scale-75 origin-left">
+                                        <LeagueBadge league={student.league as League} />
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-stone-400 mt-0.5">
                                     <span className="bg-stone-100 px-1.5 py-0.5 rounded text-stone-500 font-medium text-[10px]">
@@ -381,7 +375,7 @@ const LeaderboardSponsors: React.FC = () => {
                 <div className="relative z-10">
                     <div className="flex items-center justify-center gap-3 mb-4">
                         <span className="h-px bg-amber-400 w-8 md:w-16 opacity-70" />
-                        <h3 className="text-sm md:text-base font-black text-amber-400 uppercase tracking-[0.2em]">The Best for the Best</h3>
+                        <h3 className="text-sm md:text-base font-black text-amber-400 uppercase tracking-[0.2em]">THE BEST OF THE BEST</h3>
                         <span className="h-px bg-amber-400 w-8 md:w-16 opacity-70" />
                     </div>
                     <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10">

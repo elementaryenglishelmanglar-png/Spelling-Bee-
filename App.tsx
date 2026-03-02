@@ -15,12 +15,16 @@ import { InterschoolManager } from './views/InterschoolManager';
 import { Leaderboard } from './views/Leaderboard';
 import { SponsorsManager } from './views/SponsorsManager';
 import { VendorsManager } from './views/VendorsManager';
+import { LiveEventDisplay } from './views/LiveEventDisplay';
+import { LiveEventControls } from './views/LiveEventControls';
 
-import { LayoutDashboard, List, Play, Book, History, LogOut, Sparkles, GraduationCap, Users, School as SchoolIcon, Globe, Trophy, X, Download, Share2 } from 'lucide-react';
+import { LayoutDashboard, List, Play, Book, History, LogOut, Sparkles, GraduationCap, Users, School as SchoolIcon, Globe, Trophy, X, Download, Share2, Monitor } from 'lucide-react';
 import { hasTeacherSession, clearTeacherSession, hasSchoolSession, getSchoolSession, clearSchoolSession, SchoolSessionData } from './lib/auth';
 import { ToastProvider, useToast } from './lib/toastContext';
 import { ToastContainer } from './components/Toast';
 import { LoadingOverlay } from './components/LoadingSpinner';
+import { AnimatePresence } from 'framer-motion';
+import { PageTransition } from './components/PageTransition';
 
 import {
   isSupabaseConfigured,
@@ -402,7 +406,18 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // 3. Loading inicial de datos
+  // 3. Live Control Panel — fullscreen admin remote (teacher only)
+  if (role === 'teacher' && view === 'live-control') {
+    return (
+      <div className="min-h-screen bg-stone-950 font-sans">
+        <LiveEventControls onBack={() => setView('dashboard')} />
+        <ToastContainer toasts={toasts} onClose={removeToast} />
+      </div>
+    );
+  }
+
+
+  // 4. Loading inicial de datos
   if (dataLoading) {
     return (
       <div className="min-h-screen bg-orange-50/30 flex items-center justify-center font-sans">
@@ -567,6 +582,21 @@ const AppContent: React.FC = () => {
                 <NavButton target="history" icon={History} label="History" />
                 <NavButton target="leaderboard" icon={Trophy} label="Leaderboard" />
 
+                {/* ── Launch Live Screen button ── */}
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}${window.location.pathname}?live=1`;
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                    setView('live-control');
+
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold flex-shrink-0 bg-rose-600 text-white hover:bg-rose-500 transition-all animate-pulse hover:[animation:none] shadow-lg shadow-rose-900/40"
+                  title="Open live display in a new tab — drag to projector screen and press F11"
+                >
+                  <Monitor size={17} />
+                  <span>Launch Live Screen</span>
+                </button>
+
                 <div className="hidden lg:block h-6 w-px bg-stone-700 mx-2" />
 
                 {/* Desktop Logout */}
@@ -591,123 +621,128 @@ const AppContent: React.FC = () => {
         {/* PWA install card — inline, only when relevant */}
         <PwaInstallCard />
 
-        {/* --- TEACHER / ADMIN VIEWS --- */}
-        {role === 'teacher' && (
-          <>
-            {view === 'dashboard' && <Dashboard words={words} sessions={sessions} onChangeView={setView} beeImageUrl={BEE_IMAGE_URL} />}
+        <AnimatePresence mode="wait">
+          <PageTransition key={view}>
+            {/* --- TEACHER / ADMIN VIEWS --- */}
+            {role === 'teacher' && (
+              <>
+                {view === 'dashboard' && <Dashboard words={words} sessions={sessions} onChangeView={setView} beeImageUrl={BEE_IMAGE_URL} />}
 
-            {view === 'students' && (
-              <StudentsManager
-                students={students}
-                onAddStudent={addStudent}
-                onUpdateStudent={updateStudent}
-                onDeleteStudent={deleteStudent}
-              />
-            )}
-
-            {/* @ts-ignore */}
-            {view === 'interschool' && <InterschoolManager />}
-
-            {/* @ts-ignore */}
-            {view === 'manage-sponsors' && <SponsorsManager />}
-            {/* @ts-ignore */}
-            {view === 'manage-vendors' && <VendorsManager />}
-
-            {view === 'manage' && (
-              <div className="animate-fade-in space-y-6">
-                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-stone-800">Manage Word Lists</h2>
-                    <p className="text-stone-500">Add, remove, and review words for each grade level.</p>
-                  </div>
-                  <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-stone-200 shadow-sm overflow-x-auto">
-                    {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((g) => (
-                      <button
-                        key={g}
-                        onClick={() => setManageGrade(g as GradeLevel)}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${manageGrade === g
-                          ? 'bg-amber-400 text-stone-900 shadow-md'
-                          : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
-                          }`}
-                      >
-                        {g === 12 ? 'Group 3' : `Grade ${g}`}
-                      </button>
-                    ))}
-                  </div>
-                </header>
-                <WordForm currentGrade={manageGrade} onAddWord={addWord} />
-                <ExcelImport currentGrade={manageGrade} onAddWord={addWord} />
-                <div className="bg-stone-200 h-px w-full my-6" />
-                <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-stone-700 flex items-center justify-between">
-                    <span>Current List (Grade {manageGrade})</span>
-                    <span className="text-xs font-bold bg-stone-200 text-stone-600 px-2 py-1 rounded-full">
-                      {words.filter(w => w.grade === manageGrade).length} words
-                    </span>
-                  </h3>
-                  <WordList
-                    words={words}
-                    currentGrade={manageGrade}
-                    onDelete={deleteWord}
-                    onUpdate={updateWord}
+                {view === 'students' && (
+                  <StudentsManager
+                    students={students}
+                    onAddStudent={addStudent}
+                    onUpdateStudent={updateStudent}
+                    onDeleteStudent={deleteStudent}
                   />
-                </div>
-              </div>
+                )}
+
+                {/* @ts-ignore */}
+                {view === 'interschool' && <InterschoolManager />}
+
+                {/* @ts-ignore */}
+                {view === 'manage-sponsors' && <SponsorsManager />}
+                {/* @ts-ignore */}
+                {view === 'manage-vendors' && <VendorsManager />}
+
+                {view === 'manage' && (
+                  <div className="animate-fade-in space-y-6">
+                    <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <h2 className="text-2xl font-bold text-stone-800">Manage Word Lists</h2>
+                        <p className="text-stone-500">Add, remove, and review words for each grade level.</p>
+                      </div>
+                      <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-stone-200 shadow-sm overflow-x-auto">
+                        {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((g) => (
+                          <button
+                            key={g}
+                            onClick={() => setManageGrade(g as GradeLevel)}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${manageGrade === g
+                              ? 'bg-amber-400 text-stone-900 shadow-md'
+                              : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+                              }`}
+                          >
+                            {g === 12 ? 'Group 3' : `Grade ${g}`}
+                          </button>
+                        ))}
+                      </div>
+                    </header>
+                    <WordForm currentGrade={manageGrade} onAddWord={addWord} />
+                    <ExcelImport currentGrade={manageGrade} onAddWord={addWord} />
+                    <div className="bg-stone-200 h-px w-full my-6" />
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-stone-700 flex items-center justify-between">
+                        <span>Current List (Grade {manageGrade})</span>
+                        <span className="text-xs font-bold bg-stone-200 text-stone-600 px-2 py-1 rounded-full">
+                          {words.filter(w => w.grade === manageGrade).length} words
+                        </span>
+                      </h3>
+                      <WordList
+                        words={words}
+                        currentGrade={manageGrade}
+                        onDelete={deleteWord}
+                        onUpdate={updateWord}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {view === 'session' && (
+                  <PracticeMode
+                    words={words}
+                    registeredStudents={students}
+                    onSaveSession={saveSession}
+                  />
+                )}
+
+                {view === 'history' && (
+                  <HistoryView
+                    sessions={sessions}
+                    onDeleteSession={async (id) => {
+                      if (isSupabaseConfigured()) {
+                        try {
+                          await deleteSession(id);
+                          setSessions(prev => prev.filter(s => s.id !== id));
+                          showToast('Session deleted', 'success');
+                        } catch (e) {
+                          showToast('Error deleting session', 'error');
+                        }
+                      } else {
+                        setSessions(prev => prev.filter(s => s.id !== id));
+                        showToast('Session deleted', 'success');
+                      }
+                    }}
+                  />
+                )}
+
+                {view === 'leaderboard' && <Leaderboard />}
+
+              </>
             )}
 
-            {view === 'session' && (
-              <PracticeMode
-                words={words}
-                registeredStudents={students}
-                onSaveSession={saveSession}
-              />
+            {/* --- STUDENT VIEWS --- */}
+            {role === 'student' && (
+              <>
+                {view === 'student-generator' && (
+                  <StudentGenerator
+                    words={words}
+                    beeImageUrl={BEE_IMAGE_URL}
+                    activeStudent={activeStudent}
+                    onLogin={setActiveStudent}
+                    onRefreshStudent={refreshActiveStudent}
+                  />
+                )}
+                {view === 'student-drill' && (
+                  <StudentDrill
+                    words={words}
+                    activeStudent={activeStudent}
+                  />
+                )}
+                {view === 'leaderboard' && <Leaderboard />}
+              </>
             )}
-
-            {view === 'history' && (
-              <HistoryView
-                sessions={sessions}
-                onDeleteSession={async (id) => {
-                  if (isSupabaseConfigured()) {
-                    try {
-                      await deleteSession(id);
-                      setSessions(prev => prev.filter(s => s.id !== id));
-                      showToast('Session deleted', 'success');
-                    } catch (e) {
-                      showToast('Error deleting session', 'error');
-                    }
-                  } else {
-                    setSessions(prev => prev.filter(s => s.id !== id));
-                    showToast('Session deleted', 'success');
-                  }
-                }}
-              />
-            )}
-
-            {view === 'leaderboard' && <Leaderboard />}
-          </>
-        )}
-
-        {/* --- STUDENT VIEWS --- */}
-        {role === 'student' && (
-          <>
-            {view === 'student-generator' && (
-              <StudentGenerator
-                words={words}
-                beeImageUrl={BEE_IMAGE_URL}
-                activeStudent={activeStudent}
-                onLogin={setActiveStudent}
-                onRefreshStudent={refreshActiveStudent}
-              />
-            )}
-            {view === 'student-drill' && (
-              <StudentDrill
-                words={words}
-                activeStudent={activeStudent}
-              />
-            )}
-            {view === 'leaderboard' && <Leaderboard />}
-          </>
-        )}
+          </PageTransition>
+        </AnimatePresence>
       </main>
 
       {/* ── Student Bottom Navigation Bar ── */}
@@ -756,6 +791,15 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  // ── Standalone Live Display mode ──────────────────────────────────────────
+  // When the admin clicks "Launch Live Screen" we window.open ?live=1 in a new
+  // tab. That tab renders *only* LiveEventDisplay — no auth, no nav, no footer.
+  // The coordinator drags this tab to the projector window and presses F11.
+  const isLiveMode = new URLSearchParams(window.location.search).get('live') === '1';
+  if (isLiveMode) {
+    return <LiveEventDisplay />;
+  }
+
   return (
     <ToastProvider>
       <AppContent />

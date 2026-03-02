@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { UserCheck, Sparkles, GraduationCap, BookOpen, ArrowLeft, Lock, User, School as SchoolIcon } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Role } from '../types';
@@ -226,7 +227,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSelectRole, beeI
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
 
           {/* Administrator Card */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setLoginMode('admin')}
             className="group relative bg-white p-6 rounded-3xl shadow-md border border-stone-200
               hover:border-amber-500 hover:shadow-xl hover:-translate-y-2
@@ -252,10 +255,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSelectRole, beeI
             {/* Amber accent bottom bar */}
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-amber-600
               translate-y-1 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-b-3xl"></div>
-          </button>
+          </motion.button>
 
           {/* Invited School Card */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setLoginMode('school')}
             className="group relative bg-white p-6 rounded-3xl shadow-md border border-stone-200
               hover:border-amber-500 hover:shadow-xl hover:-translate-y-2
@@ -276,10 +281,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSelectRole, beeI
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-amber-600
               translate-y-1 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-b-3xl"></div>
-          </button>
+          </motion.button>
 
           {/* Student Card */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => onSelectRole('student')}
             className="group relative bg-white p-6 rounded-3xl shadow-md border border-stone-200
               hover:border-amber-500 hover:shadow-xl hover:-translate-y-2
@@ -300,7 +307,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSelectRole, beeI
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-amber-600
               translate-y-1 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-b-3xl"></div>
-          </button>
+          </motion.button>
 
         </div>
       </div>
