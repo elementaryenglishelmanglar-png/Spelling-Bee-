@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { WordEntry, GradeLevel, StudentProfile } from '../types';
 import { getGradeLabel } from '../lib/gradeLabel';
-import { Volume2, CheckCircle, XCircle, ChevronRight, Trophy, Shuffle, Heart, HeartCrack } from 'lucide-react';
+import { Volume2, CheckCircle, XCircle, ChevronRight, Trophy, Shuffle, Heart, HeartCrack, Search, BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { recordStudentStat, addCoins, checkAndUpdateStreak, fetchStudentWordStats } from '../services/supabaseData';
 import confetti from 'canvas-confetti';
 
-type PracticeMode = 'spelling' | 'anagram';
+type PracticeMode = 'spelling' | 'anagram' | 'proofreader' | 'scholar';
 
 interface StudentDrillProps {
   words: WordEntry[];
@@ -23,6 +23,55 @@ const shuffleLetters = (word: string): string[] => {
   return letters;
 };
 
+// Función para generar un error ortográfico sutil
+const generateTypo = (word: string): string => {
+  if (!word || word.length < 3) return word;
+  let result = word;
+  let attempts = 0;
+
+  while (result.toLowerCase() === word.toLowerCase() && attempts < 10) {
+    attempts++;
+    const letters = word.split('');
+    const typoType = Math.floor(Math.random() * 3);
+
+    if (typoType === 0) {
+      const idx = Math.floor(Math.random() * (letters.length - 1));
+      if (letters[idx].toLowerCase() !== letters[idx + 1].toLowerCase()) {
+        [letters[idx], letters[idx + 1]] = [letters[idx + 1], letters[idx]];
+      } else {
+        letters.splice(idx, 1);
+      }
+    } else if (typoType === 1) {
+      const idx = Math.floor(Math.random() * letters.length);
+      letters.splice(idx, 0, letters[idx]);
+    } else {
+      const map: Record<string, string[]> = {
+        'a': ['e', 'o'], 'e': ['a', 'i'], 'i': ['e', 'y'], 'o': ['u', 'a'], 'u': ['o'],
+        'c': ['s', 'z'], 's': ['c', 'z'], 'z': ['s', 'c'], 'b': ['v'], 'v': ['b'],
+        'm': ['n'], 'n': ['m'], 'g': ['j'], 'j': ['g']
+      };
+      const changeableIndices = letters.map((l, i) => map[l.toLowerCase()] ? i : -1).filter(i => i !== -1);
+      if (changeableIndices.length > 0) {
+        const idx = changeableIndices[Math.floor(Math.random() * changeableIndices.length)];
+        const char = letters[idx].toLowerCase();
+        const options = map[char];
+        const newChar = options[Math.floor(Math.random() * options.length)];
+        letters[idx] = letters[idx] === letters[idx].toUpperCase() ? newChar.toUpperCase() : newChar;
+      } else {
+        const idx = Math.floor(Math.random() * letters.length);
+        letters.splice(idx, 1);
+      }
+    }
+    result = letters.join('');
+  }
+
+  if (result.toLowerCase() === word.toLowerCase()) {
+    const idx = Math.floor(word.length / 2);
+    result = word.slice(0, idx) + word.slice(idx + 1);
+  }
+  return result;
+};
+
 export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent }) => {
   const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(activeStudent?.grade || 1);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('spelling');
@@ -34,6 +83,9 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
   const [score, setScore] = useState(0);
   const [wordHistory, setWordHistory] = useState<any[]>([]);
+  const [typoWord, setTypoWord] = useState('');
+  const [selectedTypoIndex, setSelectedTypoIndex] = useState<number | null>(null);
+  const [usedAudioHint, setUsedAudioHint] = useState(false);
 
   // Gamification States
   const [lives, setLives] = useState(3);
@@ -72,11 +124,25 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
     } else {
       // Calculate weights
       const weights = gradeWords.map(word => {
+        // Prevent immediate repetition if possible
+        if (currentWord && word.id === currentWord.id && gradeWords.length > 1) {
+          return 0; // Don't repeat immediately if there are other words
+        }
+
         const stats = wordHistory.filter(h => h.word_id === word.id);
-        if (stats.length === 0) return 20; // New word bonus
+        if (stats.length === 0) return 30; // New word bonus (increased for variety)
 
         const lastAttempt = stats[0]; // Ordered by desc time
-        if (!lastAttempt.is_correct) return 50; // High priority for recent errors
+
+        let errorCount = 0;
+        for (const s of stats) {
+          if (!s.is_correct) errorCount++;
+        }
+
+        if (!lastAttempt.is_correct) {
+          // Retry more specifically proportional to error counts, but ensure variety
+          return 40 + (errorCount * 10);
+        }
 
         // Check consecutive correct
         let consecutive = 0;
@@ -86,7 +152,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
         }
         if (consecutive > 2) return 1; // Mastered
 
-        return 5; // Standard review
+        return 10; // Standard review
       });
 
       // Weighted Random Selection
@@ -107,16 +173,23 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
     setUserInput('');
     setSelectedLetters([]);
     setFeedback('none');
+    setSelectedTypoIndex(null);
+    setUsedAudioHint(false);
     setMascotMessage("Listen carefully...");
 
     // Si es modo anagrama, mezclar las letras
     if (practiceMode === 'anagram') {
       const shuffled = shuffleLetters(selectedWord.word);
       setShuffledLetters(shuffled);
+    } else if (practiceMode === 'proofreader') {
+      const typo = generateTypo(selectedWord.word);
+      setTypoWord(typo);
     }
 
-    // Auto pronounce after a short delay
-    setTimeout(() => speak(selectedWord.audioUrl), 500);
+    // Auto pronounce after a short delay unless it's scholar mode
+    if (practiceMode !== 'scholar') {
+      setTimeout(() => speak(selectedWord.audioUrl), 500);
+    }
 
     // Focus input si es modo spelling
     if (practiceMode === 'spelling') {
@@ -155,6 +228,116 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
     // Devolver la letra a las disponibles
     setShuffledLetters([...shuffledLetters, letter]);
   };
+
+  const handleTypoLetterClick = (index: number) => {
+    if (feedback !== 'none') return;
+    setSelectedTypoIndex(index === selectedTypoIndex ? null : index);
+  };
+
+  const submitProofreaderAnswer = (correctedWord: string) => {
+    if (!currentWord) return;
+
+    const userAnswer = correctedWord.toLowerCase();
+    const correctAnswer = currentWord.word.toLowerCase();
+    const isCorrect = userAnswer === correctAnswer;
+    const timeTaken = Math.round((Date.now() - startTime.current) / 1000);
+
+    // Calcular puntos basados en el modo
+    let basePoints = 25; // Proofreader base points
+    let points = isCorrect ? basePoints : 0;
+
+    // Penalización por usar pista de audio en modo scholar (o si se adaptó para proofreader)
+    if (isCorrect && usedAudioHint) {
+      points = Math.floor(points / 2);
+    }
+
+    if (isCorrect) {
+      setFeedback('correct');
+      setScore(s => s + points);
+      setMascotMessage("Amazing! You found the typo!");
+      confetti({
+        particleCount: 120,
+        spread: 72,
+        origin: { y: 0.6 },
+        colors: ['#F59E0B', '#D97706', '#1C1917'], // Gold/Onyx for premium feel
+      });
+      // Add coins logic (e.g. 1 coin per correct answer)
+      if (activeStudent) {
+        addCoins(activeStudent.id, 1);
+        checkAndUpdateStreak(activeStudent.id).then(res => {
+          if (res.message && (res.message.includes("Increase") || res.message.includes("Saved"))) {
+            setMascotMessage(res.message);
+          }
+        });
+      }
+    } else {
+      setFeedback('incorrect');
+      // Set to the 'wrong' guessed word briefly so user sees what they entered
+      setTypoWord(correctedWord);
+      setMascotMessage(`Oops! The correct spelling is "${currentWord.word}".`);
+      const newLives = lives - 1;
+      setLives(newLives);
+      if (newLives === 0) {
+        setGameOver(true);
+        setMascotMessage("Don't worry! Practice makes perfect. Try again!");
+      }
+    }
+
+    if (activeStudent) {
+      recordStudentStat({
+        studentId: activeStudent.id,
+        wordId: currentWord.id,
+        isCorrect,
+        timeTaken,
+        pointsEarned: points
+      });
+      fetchStudentWordStats(activeStudent.id).then(setWordHistory);
+    }
+  };
+
+  const handleVirtualKeyPress = (key: string) => {
+    if (practiceMode !== 'proofreader' || feedback !== 'none' || selectedTypoIndex === null) return;
+
+    // Reconstruct the word with the new letter
+    const letters = typoWord.split('');
+    letters[selectedTypoIndex] = key;
+    const correctedWord = letters.join('');
+
+    // Visually update the typo word temporarily, then submit for checking
+    setTypoWord(correctedWord);
+    setSelectedTypoIndex(null);
+
+    // Small delay to allow react state to visually update before checking
+    setTimeout(() => {
+      submitProofreaderAnswer(correctedWord);
+    }, 50);
+  };
+
+  // Listen for physical keyboard presses when a typo letter is selected
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if not in proofreader mode, game is over, feedback is showing, or nothing is selected
+      if (practiceMode !== 'proofreader' || gameOver || feedback !== 'none' || selectedTypoIndex === null) return;
+
+      // Allow backspace/delete to "clear" a tile or modify it if requested later, 
+      // but for now, we just want A-Z
+      if (/^[a-zA-Z]$/.test(e.key)) {
+        handleVirtualKeyPress(e.key);
+      } else if (e.key === 'Escape') {
+        setSelectedTypoIndex(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [practiceMode, gameOver, feedback, selectedTypoIndex, typoWord]);
+
+  // Keyboard layout for virtual keyboard
+  const keyboardRows = [
+    ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
+    ['z', 'x', 'c', 'v', 'b', 'n', 'm']
+  ];
 
   // Función helper para recalcular letras disponibles basándose en la palabra original y el input del usuario
   const recalculateAvailableLetters = (inputText: string): string[] => {
@@ -204,7 +387,21 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
     const correctAnswer = currentWord.word.toLowerCase();
     const isCorrect = userAnswer === correctAnswer;
     const timeTaken = Math.round((Date.now() - startTime.current) / 1000);
-    const points = isCorrect ? 15 : 0;
+
+    // Calcular puntos basados en el modo
+    let basePoints = 15;
+    if (practiceMode === 'anagram') basePoints = 20;
+    if (practiceMode === 'proofreader') basePoints = 25;
+    if (practiceMode === 'scholar') basePoints = 30; // Scholar base points
+
+    let points = isCorrect ? basePoints : 0;
+
+    // Penalización por usar pista de audio en modo scholar
+    if (isCorrect && usedAudioHint && practiceMode === 'scholar') {
+      points = Math.floor(points / 2);
+    }
+
+
 
     if (isCorrect) {
       setFeedback('correct');
@@ -265,7 +462,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
         {/* Mode Selector */}
         <div className="mb-8">
           <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-4">Choose Mode</label>
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <button
               onClick={() => setPracticeMode('spelling')}
               className={`p-5 rounded-2xl border-2 transition-all group ${practiceMode === 'spelling'
@@ -293,6 +490,34 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
               </div>
               <div className={`font-bold ${practiceMode === 'anagram' ? 'text-white' : 'text-stone-800'}`}>Anagram Game</div>
               <div className={`text-xs mt-1 ${practiceMode === 'anagram' ? 'text-stone-400' : 'text-stone-400'}`}>Unscramble</div>
+            </button>
+            <button
+              onClick={() => setPracticeMode('proofreader')}
+              className={`p-5 rounded-2xl border-2 transition-all group ${practiceMode === 'proofreader'
+                ? 'bg-indigo-50 border-indigo-500 shadow-md scale-[1.02]'
+                : 'bg-white text-stone-600 border-stone-100 hover:border-indigo-200'
+                }`}
+            >
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors ${practiceMode === 'proofreader' ? 'bg-indigo-500 text-white' : 'bg-stone-100 text-stone-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'
+                }`}>
+                <Search size={24} />
+              </div>
+              <div className={`font-bold ${practiceMode === 'proofreader' ? 'text-indigo-900' : 'text-stone-800'}`}>Proofreader Challenge</div>
+              <div className={`text-xs mt-1 ${practiceMode === 'proofreader' ? 'text-indigo-600' : 'text-stone-400'}`}>Fix the Typo</div>
+            </button>
+            <button
+              onClick={() => setPracticeMode('scholar')}
+              className={`p-5 rounded-2xl border-2 transition-all group ${practiceMode === 'scholar'
+                ? 'bg-emerald-50 border-emerald-500 shadow-md scale-[1.02]'
+                : 'bg-white text-stone-600 border-stone-100 hover:border-emerald-200'
+                }`}
+            >
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors ${practiceMode === 'scholar' ? 'bg-emerald-500 text-white' : 'bg-stone-100 text-stone-400 group-hover:bg-emerald-50 group-hover:text-emerald-500'
+                }`}>
+                <BookOpen size={24} />
+              </div>
+              <div className={`font-bold ${practiceMode === 'scholar' ? 'text-emerald-900' : 'text-stone-800'}`}>Scholar Mode</div>
+              <div className={`text-xs mt-1 ${practiceMode === 'scholar' ? 'text-emerald-600' : 'text-stone-400'}`}>Read &amp; Spell</div>
             </button>
           </div>
         </div>
@@ -372,7 +597,8 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-stone-500 font-medium">BeeCoins Earned</span>
-                <span className="text-xl font-bold text-amber-500">+{Math.floor(score / 15)}</span>
+                {/* Asumiendo que ganas 1 moneda independientemente del sistema de XP, es un cálculo estimado del GameOver */}
+                <span className="text-xl font-bold text-amber-500">+{Math.floor(score / (practiceMode === 'scholar' ? 30 : practiceMode === 'proofreader' ? 25 : practiceMode === 'anagram' ? 20 : 15))}</span>
               </div>
             </div>
             <button
@@ -385,17 +611,19 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
         )}
 
         <div className="p-5 sm:p-7">
-          {/* ── Audio button (large, centered) ── */}
-          <div className="flex flex-col items-center mb-6">
-            <button
-              onClick={() => currentWord && speak(currentWord.audioUrl)}
-              disabled={gameOver}
-              className="w-24 h-24 bg-stone-900 hover:bg-stone-800 text-amber-400 rounded-full flex items-center justify-center mx-auto transition-all shadow-lg active:scale-95 border-4 border-white ring-2 ring-stone-800/10"
-            >
-              <Volume2 size={38} />
-            </button>
-            <p className="text-stone-400 text-[11px] font-bold uppercase tracking-widest mt-3">Tap to Listen</p>
-          </div>
+          {/* ── Audio button (large, centered) — Hidden in Scholar mode initially ── */}
+          {practiceMode !== 'scholar' && (
+            <div className="flex flex-col items-center mb-6">
+              <button
+                onClick={() => currentWord && speak(currentWord.audioUrl)}
+                disabled={gameOver}
+                className="w-24 h-24 bg-stone-900 hover:bg-stone-800 text-amber-400 rounded-full flex items-center justify-center mx-auto transition-all shadow-lg active:scale-95 border-4 border-white ring-2 ring-stone-800/10"
+              >
+                <Volume2 size={38} />
+              </button>
+              <p className="text-stone-400 text-[11px] font-bold uppercase tracking-widest mt-3">Tap to Listen</p>
+            </div>
+          )}
 
           {feedback === 'none' ? (
             <form onSubmit={checkSpelling}>
@@ -450,6 +678,138 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                     </div>
                   </div>
                 </>
+              ) : practiceMode === 'proofreader' ? (
+                <>
+                  {/* Proofreader mode visual typo display */}
+                  <div className="mb-6 text-center animate-fade-in relative">
+                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-4">Tap the incorrect letter</p>
+
+                    <div className="flex flex-wrap justify-center gap-2 min-h-[72px] mb-8">
+                      {typoWord.split('').map((letter, index) => (
+                        <motion.button
+                          key={`typo-${index}-${letter}`}
+                          type="button"
+                          whileHover={{ scale: feedback === 'none' ? 1.05 : 1 }}
+                          whileTap={{ scale: feedback === 'none' ? 0.95 : 1 }}
+                          onClick={() => handleTypoLetterClick(index)}
+                          disabled={feedback !== 'none'}
+                          className={`w-12 h-14 sm:w-14 sm:h-16 flex items-center justify-center rounded-xl shadow-sm transition-all duration-200 select-none
+                             ${feedback === 'correct'
+                              ? 'bg-emerald-50 border-2 border-emerald-400 text-emerald-700 shadow-[0_0_15px_rgba(52,211,153,0.4)]'
+                              : feedback === 'incorrect'
+                                ? 'bg-rose-50 border-2 border-rose-400 text-rose-700 shadow-[0_0_15px_rgba(251,113,133,0.4)] animate-shake'
+                                : selectedTypoIndex === index
+                                  ? 'bg-amber-50 border-2 border-amber-500 text-amber-900 ring-4 ring-amber-500/20 translate-y-[-4px]'
+                                  : 'bg-stone-50 border border-stone-200 border-b-[4px] border-b-stone-300 text-stone-900 hover:border-b-stone-400 hover:bg-white'
+                            }
+                           `}
+                        >
+                          <span className="font-serif text-2xl sm:text-3xl font-bold tracking-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
+                            {letter}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+
+                    {/* Virtual Keyboard (Only shows when a letter is selected) */}
+                    {selectedTypoIndex !== null && feedback === 'none' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-stone-100 p-3 sm:p-4 rounded-2xl border border-stone-200 mt-4 mx-auto max-w-sm shadow-inner"
+                      >
+                        <p className="text-xs font-bold text-stone-500 mb-3">Select replacement letter</p>
+                        <div className="flex flex-col gap-2">
+                          {keyboardRows.map((row, rowIndex) => (
+                            <div key={`row-${rowIndex}`} className="flex justify-center gap-1.5 sm:gap-2">
+                              {row.map(key => (
+                                <button
+                                  key={`key-${key}`}
+                                  type="button"
+                                  onClick={() => handleVirtualKeyPress(key)}
+                                  className="w-8 h-10 sm:w-9 sm:h-11 bg-white border border-stone-300 border-b-[3px] rounded-lg font-bold text-stone-700 uppercase hover:bg-stone-50 hover:border-b-stone-400 hover:text-stone-900 active:translate-y-[2px] active:border-b-[1px] transition-all"
+                                >
+                                  {key}
+                                </button>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                </>
+              ) : practiceMode === 'scholar' ? (
+                <>
+                  {/* Scholar mode Dictionary Card */}
+                  <div className="mb-6 animate-fade-in">
+                    <div className="bg-stone-50 border-double border-4 border-stone-300 rounded-xl p-6 sm:p-8 shadow-sm relative text-center min-h-[160px] flex flex-col justify-center items-center">
+                      <p className="text-amber-600 font-serif italic mb-3 text-lg">
+                        {currentWord?.partOfSpeech || 'noun'}
+                      </p>
+
+                      {currentWord?.definition ? (
+                        <p className="text-stone-900 font-medium text-xl sm:text-2xl leading-snug">
+                          {currentWord.definition}
+                        </p>
+                      ) : (
+                        <p className="text-stone-400 italic text-lg opacity-80">
+                          Definition redacted for competition.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Elegant input for scholar mode */}
+                  <div className={`relative mb-6 transition-all`}>
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      placeholder="Spell the word..."
+                      className={`w-full text-center text-[20px] font-serif text-stone-900 placeholder:text-stone-300 placeholder:font-sans
+                        border-b-[3px] py-3 px-4 focus:outline-none bg-transparent
+                        transition-all duration-300
+                        ${feedback === 'correct'
+                          ? 'border-emerald-400 text-emerald-700'
+                          : feedback === 'incorrect'
+                            ? 'border-rose-400 text-rose-700'
+                            : 'border-stone-400 focus:border-amber-500 focus:shadow-[0_4px_12px_-6px_rgba(245,158,11,0.5)]'
+                        }`}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      autoCapitalize="none"
+                    />
+                  </div>
+
+                  {/* Reveal Audio Hint button */}
+                  <div className="flex justify-center mb-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUsedAudioHint(true);
+                        speak(currentWord?.audioUrl);
+                      }}
+                      disabled={feedback !== 'none'}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-bold transition-all
+                        ${usedAudioHint
+                          ? 'bg-rose-50 border-rose-200 text-rose-600'
+                          : 'bg-white border-stone-200 text-stone-500 hover:text-amber-600 hover:border-amber-300 hover:bg-amber-50 shadow-sm'
+                        }`}
+                    >
+                      <Volume2 size={16} />
+                      {usedAudioHint ? (
+                        <span className="flex items-center gap-1">
+                          Audio revealed <span className="bg-rose-100 px-1.5 py-0.5 rounded text-[10px] uppercase ml-1">-50% XP</span>
+                        </span>
+                      ) : (
+                        "Reveal Audio Hint"
+                      )}
+                    </button>
+                  </div>
+                </>
               ) : (
                 /* Spelling input — text-[16px] to prevent iOS auto-zoom */
                 <div className={`relative mb-6 transition-all`}>
@@ -476,15 +836,17 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                 </div>
               )}
 
-              <motion.button
-                type="submit"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                disabled={!userInput.trim()}
-                className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-stone-900 rounded-2xl font-bold shadow-md shadow-amber-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Check Answer
-              </motion.button>
+              {practiceMode !== 'proofreader' && (
+                <motion.button
+                  type="submit"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  disabled={!userInput.trim()}
+                  className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-stone-900 rounded-2xl font-bold shadow-md shadow-amber-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Check Answer
+                </motion.button>
+              )}
             </form>
           ) : (
             <div className="animate-fade-in">
@@ -498,7 +860,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                     : <XCircle size={30} />}
                 </div>
                 <h3 className="text-2xl font-black">
-                  {feedback === 'correct' ? 'Correct! +15 pts' : 'Incorrect'}
+                  {feedback === 'correct' ? `Correct! +${usedAudioHint ? Math.floor((practiceMode === 'scholar' ? 30 : practiceMode === 'proofreader' ? 25 : practiceMode === 'anagram' ? 20 : 15) / 2) : (practiceMode === 'scholar' ? 30 : practiceMode === 'proofreader' ? 25 : practiceMode === 'anagram' ? 20 : 15)} pts` : 'Incorrect'}
                 </h3>
                 {feedback === 'incorrect' && (
                   <p className="text-stone-600 text-sm mt-1">
