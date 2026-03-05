@@ -414,23 +414,27 @@ export async function fetchSchoolResources(grade?: number): Promise<SchoolResour
   }));
 }
 
-export async function addSchoolResource(resource: SchoolResource, file: File): Promise<SchoolResource> {
+export async function addSchoolResource(resource: SchoolResource, file: File | null): Promise<SchoolResource> {
   if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
 
-  // Upload file
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${resource.id}.${fileExt}`;
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from(BUCKET_SCHOOL_RESOURCES)
-    .upload(fileName, file);
+  let publicUrl = resource.fileUrl; // Start with provided url (for links)
 
-  if (uploadError) throw uploadError;
+  // Upload file if provided
+  if (file) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${resource.id}.${fileExt}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(BUCKET_SCHOOL_RESOURCES)
+      .upload(fileName, file);
 
-  const { data: urlData } = supabase.storage
-    .from(BUCKET_SCHOOL_RESOURCES)
-    .getPublicUrl(fileName);
+    if (uploadError) throw uploadError;
 
-  const publicUrl = urlData.publicUrl;
+    const { data: urlData } = supabase.storage
+      .from(BUCKET_SCHOOL_RESOURCES)
+      .getPublicUrl(fileName);
+
+    publicUrl = urlData.publicUrl;
+  }
 
   // Insert Record
   const { data, error } = await supabase
@@ -461,10 +465,12 @@ export async function deleteSchoolResource(id: string, fileUrl: string): Promise
   if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
 
   // Extract filename from URL to delete from storage
-  // URL format: .../school-resources/uuid.pdf
-  const fileName = fileUrl.split('/').pop();
-  if (fileName) {
-    await supabase.storage.from(BUCKET_SCHOOL_RESOURCES).remove([fileName]);
+  // Only attempt deletion for Supabase hosted files
+  if (fileUrl.includes('supabase.co') && fileUrl.includes(BUCKET_SCHOOL_RESOURCES)) {
+    const fileName = fileUrl.split('/').pop();
+    if (fileName) {
+      await supabase.storage.from(BUCKET_SCHOOL_RESOURCES).remove([fileName]);
+    }
   }
 
   const { error } = await supabase.from('school_resources').delete().eq('id', id);

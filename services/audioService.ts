@@ -39,7 +39,8 @@ export async function generateAndUploadAudio(word: string): Promise<string> {
     const audioBlob = await res.blob();
 
     // 2 — Upload to Supabase Storage
-    const fileName = `ai_${Date.now()}_${word.toLowerCase().replace(/\s+/g, '_')}.mp3`;
+    const cleanWord = word.toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]/g, '');
+    const fileName = `ai_${Date.now()}_${cleanWord}.mp3`;
 
     const { error: uploadError } = await supabase.storage
         .from('word-audio')

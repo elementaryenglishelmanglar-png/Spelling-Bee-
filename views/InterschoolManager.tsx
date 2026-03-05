@@ -4,7 +4,7 @@ import { School, StudentProfile, Payment, SchoolResource, GradeLevel } from '../
 import { fetchSchools, addSchool, updateSchool, deleteSchool, fetchStudents, fetchPayments, updatePayment, fetchSchoolResources, addSchoolResource, deleteSchoolResource } from '../services/supabaseData';
 import { useToast } from '../lib/toastContext';
 import { LoadingOverlay } from '../components/LoadingSpinner';
-import { Plus, School as SchoolIcon, Users, ChevronRight, UserCheck, Trash2, Edit2, DollarSign, Upload, Image as ImageIcon, CheckCircle, XCircle, Clock, FileText, Trophy, Download } from 'lucide-react';
+import { Plus, School as SchoolIcon, Users, ChevronRight, UserCheck, Trash2, Edit2, DollarSign, Upload, Image as ImageIcon, CheckCircle, XCircle, Clock, FileText, Trophy, Download, Link as LinkIcon } from 'lucide-react';
 
 export const InterschoolManager: React.FC = () => {
     const { showToast } = useToast();
@@ -28,6 +28,8 @@ export const InterschoolManager: React.FC = () => {
     const [resourceTitle, setResourceTitle] = useState('');
     const [resourceGrade, setResourceGrade] = useState<GradeLevel>(1);
     const [resourceFile, setResourceFile] = useState<File | null>(null);
+    const [resourceType, setResourceType] = useState<'pdf' | 'link'>('pdf');
+    const [resourceLink, setResourceLink] = useState('');
 
     // Selected photo modal
     const [selectedPhotoInfo, setSelectedPhotoInfo] = useState<{ student: StudentProfile, grade: number } | null>(null);
@@ -59,8 +61,16 @@ export const InterschoolManager: React.FC = () => {
 
     const handleResourceUpload = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!resourceTitle || !resourceFile) {
-            showToast('Title and PDF file are required', 'error');
+        if (!resourceTitle) {
+            showToast('Title is required', 'error');
+            return;
+        }
+        if (resourceType === 'pdf' && !resourceFile) {
+            showToast('PDF file is required', 'error');
+            return;
+        }
+        if (resourceType === 'link' && !resourceLink) {
+            showToast('External link is required', 'error');
             return;
         }
 
@@ -70,17 +80,18 @@ export const InterschoolManager: React.FC = () => {
                 id: crypto.randomUUID(),
                 title: resourceTitle,
                 grade: resourceGrade,
-                fileUrl: '', // Will be set by service
+                fileUrl: resourceType === 'link' ? resourceLink : '',
                 createdAt: new Date().toISOString()
             };
 
-            const added = await addSchoolResource(newRes, resourceFile);
+            const added = await addSchoolResource(newRes, resourceType === 'pdf' ? resourceFile : null);
             setResources(prev => [added, ...prev]);
-            showToast('Resource uploaded successfully', 'success');
+            showToast('Resource added successfully', 'success');
 
             // Reset
             setResourceTitle('');
             setResourceFile(null);
+            setResourceLink('');
             setResourceGrade(1);
             // Reset file input
             const fileInput = document.getElementById('file-upload') as HTMLInputElement;
@@ -243,8 +254,30 @@ export const InterschoolManager: React.FC = () => {
                     <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
                         <h3 className="text-lg font-bold text-stone-800 mb-4 flex items-center gap-2">
                             <Upload size={20} className="text-blue-600" />
-                            Upload New Resource (PDF)
+                            Add New Resource
                         </h3>
+
+                        <div className="flex gap-4 mb-6">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    checked={resourceType === 'pdf'}
+                                    onChange={() => setResourceType('pdf')}
+                                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-sm font-bold text-stone-700">PDF File</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    checked={resourceType === 'link'}
+                                    onChange={() => setResourceType('link')}
+                                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-sm font-bold text-stone-700">External Link</span>
+                            </label>
+                        </div>
+
                         <form onSubmit={handleResourceUpload} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                             <div className="md:col-span-1">
                                 <label className="block text-sm font-bold text-stone-700 mb-1">Target Grade</label>
@@ -269,19 +302,35 @@ export const InterschoolManager: React.FC = () => {
                                 />
                             </div>
                             <div className="md:col-span-1">
-                                <label className="block text-sm font-bold text-stone-700 mb-1">PDF File</label>
-                                <input
-                                    id="file-upload"
-                                    type="file"
-                                    accept="application/pdf"
-                                    onChange={e => setResourceFile(e.target.files?.[0] || null)}
-                                    className="w-full text-sm text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                    required
-                                />
+                                {resourceType === 'pdf' ? (
+                                    <>
+                                        <label className="block text-sm font-bold text-stone-700 mb-1">PDF File</label>
+                                        <input
+                                            id="file-upload"
+                                            type="file"
+                                            accept="application/pdf"
+                                            onChange={e => setResourceFile(e.target.files?.[0] || null)}
+                                            className="w-full text-sm text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                            required
+                                        />
+                                    </>
+                                ) : (
+                                    <>
+                                        <label className="block text-sm font-bold text-stone-700 mb-1">Link URL</label>
+                                        <input
+                                            type="url"
+                                            value={resourceLink}
+                                            onChange={e => setResourceLink(e.target.value)}
+                                            placeholder="https://..."
+                                            className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                            required
+                                        />
+                                    </>
+                                )}
                             </div>
                             <div className="md:col-span-1">
                                 <button type="submit" disabled={processing} className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition-colors">
-                                    Upload PDF
+                                    {resourceType === 'pdf' ? 'Upload PDF' : 'Add Link'}
                                 </button>
                             </div>
                         </form>
@@ -313,7 +362,11 @@ export const InterschoolManager: React.FC = () => {
                                             </td>
                                             <td className="py-3 px-4 font-bold text-stone-800">
                                                 <a href={r.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-blue-600 hover:underline">
-                                                    <FileText size={16} className="text-red-500" />
+                                                    {r.fileUrl.includes('.pdf') || (r.fileUrl.includes('supabase') && r.fileUrl.includes('school-resources')) ? (
+                                                        <FileText size={16} className="text-red-500" />
+                                                    ) : (
+                                                        <LinkIcon size={16} className="text-blue-500" />
+                                                    )}
                                                     {r.title}
                                                 </a>
                                             </td>
