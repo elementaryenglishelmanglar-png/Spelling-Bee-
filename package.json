@@ -12,6 +12,7 @@
     "@google/genai": "^1.40.0",
     "@supabase/supabase-js": "^2.47.0",
     "@types/canvas-confetti": "^1.9.0",
+    "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",
     "framer-motion": "^12.34.3",
     "lucide-react": "^0.563.0",
