@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { WordEntry, GradeLevel, StudentProfile } from '../types';
 import { getGradeLabel } from '../lib/gradeLabel';
-import { Volume2, CheckCircle, XCircle, ChevronRight, Trophy, Shuffle, Heart, HeartCrack, Search, BookOpen } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { recordStudentStat, addCoins, checkAndUpdateStreak, fetchStudentWordStats } from '../services/supabaseData';
+import { Volume2, CheckCircle, XCircle, ChevronRight, Trophy, Shuffle, Heart, HeartCrack, Search, BookOpen, Zap, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { recordStudentStat, addCoins, checkAndUpdateStreak, fetchStudentWordStats, checkAndUnlockAchievements, fetchStudentInventory, consumeInventoryItem } from '../services/supabaseData';
 import confetti from 'canvas-confetti';
 
 type PracticeMode = 'spelling' | 'anagram' | 'proofreader' | 'scholar';
@@ -91,15 +91,40 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
   const [lives, setLives] = useState(3);
   const [gameOver, setGameOver] = useState(false);
   const [mascotMessage, setMascotMessage] = useState<string>("Let's spell!");
+  const [sessionCorrectStreak, setSessionCorrectStreak] = useState(0);
+  const [sessionTotalXp, setSessionTotalXp] = useState(0);
+  const [sessionTotalCorrect, setSessionTotalCorrect] = useState(0);
+  const [achievementToast, setAchievementToast] = useState<string | null>(null);
+  const [inventory, setInventory] = useState<any[]>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (activeStudent) { // Added null check for activeStudent
+    if (activeStudent) {
       setSelectedGrade(activeStudent.grade);
       fetchStudentWordStats(activeStudent.id).then(setWordHistory);
+      fetchStudentInventory(activeStudent.id).then(setInventory);
     }
   }, [activeStudent]);
+
+  // Show achievement toast for 3s then hide
+  const showAchievementToast = useCallback((keys: string[]) => {
+    if (keys.length === 0) return;
+    const BADGE_NAMES: Record<string, string> = {
+      first_win: '🌟 First Victory!',
+      streak_3: '🔥 3-Day Streak!',
+      streak_7: '🔥 7-Day Streak!',
+      streak_14: '🔥 14-Day Streak!',
+      xp_1000: '⚡ 1,000 XP!',
+      xp_5000: '⚡ 5,000 XP!',
+      perfect_round: '🎯 5 in a Row!',
+      champion: '👑 #1 Champion!',
+      master: '💎 Master of Letters!',
+    };
+    const label = BADGE_NAMES[keys[0]] ?? `Achievement: ${keys[0]}`;
+    setAchievementToast(label);
+    setTimeout(() => setAchievementToast(null), 3500);
+  }, []);
 
   const gradeWords = useMemo(() => words.filter(w => w.grade === selectedGrade), [words, selectedGrade]);
 
@@ -108,6 +133,9 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
     setScore(0);
     setLives(3);
     setGameOver(false);
+    setSessionCorrectStreak(0);
+    setSessionTotalXp(0);
+    setSessionTotalCorrect(0);
     setMascotMessage("Good luck! You can do this!");
     nextWord();
   };
@@ -261,13 +289,28 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
         origin: { y: 0.6 },
         colors: ['#F59E0B', '#D97706', '#1C1917'], // Gold/Onyx for premium feel
       });
-      // Add coins logic (e.g. 1 coin per correct answer)
+      // Add coins and check streak + achievements
       if (activeStudent) {
+        const newSessionStreak = sessionCorrectStreak + 1;
+        const newSessionXp = sessionTotalXp + points;
+        const newSessionTotalCorrect = sessionTotalCorrect + 1;
+        setSessionCorrectStreak(newSessionStreak);
+        setSessionTotalXp(newSessionXp);
+        setSessionTotalCorrect(newSessionTotalCorrect);
         addCoins(activeStudent.id, 1);
-        checkAndUpdateStreak(activeStudent.id).then(res => {
-          if (res.message && (res.message.includes("Increase") || res.message.includes("Saved"))) {
-            setMascotMessage(res.message);
+        checkAndUpdateStreak(activeStudent.id).then(streakRes => {
+          if (streakRes.message && (streakRes.message.includes('Increase') || streakRes.message.includes('Saved'))) {
+            setMascotMessage(streakRes.message);
           }
+          checkAndUnlockAchievements(activeStudent.id, {
+            totalXp: (activeStudent.total_xp ?? 0) + newSessionXp,
+            currentStreak: streakRes.streak,
+            sessionCorrectStreak: newSessionStreak,
+            timeTakenSeconds: timeTaken,
+            totalCorrectAnswers: wordHistory.filter(w => w.is_correct).length + newSessionTotalCorrect,
+            coinsBalance: (activeStudent.coins ?? 0) + newSessionTotalCorrect,
+            inventoryItemCount: inventory.length,
+          }).then(newBadges => showAchievementToast(newBadges));
         });
       }
     } else {
@@ -413,17 +456,33 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
         origin: { y: 0.6 },
         colors: ['#F59E0B', '#D97706', '#FFFFFF', '#1C1917'],
       });
-      // Add coins logic (e.g. 1 coin per correct answer)
+      // Add coins and check streak + achievements
       if (activeStudent) {
+        const newSessionStreak = sessionCorrectStreak + 1;
+        const newSessionXp = sessionTotalXp + points;
+        const newSessionTotalCorrect = sessionTotalCorrect + 1;
+        setSessionCorrectStreak(newSessionStreak);
+        setSessionTotalXp(newSessionXp);
+        setSessionTotalCorrect(newSessionTotalCorrect);
         addCoins(activeStudent.id, 1);
-        checkAndUpdateStreak(activeStudent.id).then(res => {
-          if (res.message && (res.message.includes("Increase") || res.message.includes("Saved"))) {
-            setMascotMessage(res.message);
+        checkAndUpdateStreak(activeStudent.id).then(streakRes => {
+          if (streakRes.message && (streakRes.message.includes('Increase') || streakRes.message.includes('Saved'))) {
+            setMascotMessage(streakRes.message);
           }
+          checkAndUnlockAchievements(activeStudent.id, {
+            totalXp: (activeStudent.total_xp ?? 0) + newSessionXp,
+            currentStreak: streakRes.streak,
+            sessionCorrectStreak: newSessionStreak,
+            timeTakenSeconds: timeTaken,
+            totalCorrectAnswers: wordHistory.filter(w => w.is_correct).length + newSessionTotalCorrect,
+            coinsBalance: (activeStudent.coins ?? 0) + newSessionTotalCorrect,
+            inventoryItemCount: inventory.length,
+          }).then(newBadges => showAchievementToast(newBadges));
         });
       }
     } else {
       setFeedback('incorrect');
+      setSessionCorrectStreak(0); // reset on wrong answer
       setMascotMessage(`Oops! The correct spelling is "${currentWord.word}".`);
       const newLives = lives - 1;
       setLives(newLives);
@@ -548,6 +607,21 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
   return (
     <div className="max-w-xl mx-auto pb-4">
 
+      {/* ── Achievement Toast ── */}
+      <AnimatePresence>
+        {achievementToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -40, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-amber-500 text-stone-900 px-6 py-3 rounded-2xl shadow-2xl font-black text-lg flex items-center gap-3 border-2 border-amber-300"
+          >
+            <Zap size={22} className="text-stone-900" />
+            Achievement Unlocked: {achievementToast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Zen HUD: single compact row ── */}
       <div className="flex items-center justify-between mb-5 px-1">
         <button
@@ -597,10 +671,28 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-stone-500 font-medium">BeeCoins Earned</span>
-                {/* Asumiendo que ganas 1 moneda independientemente del sistema de XP, es un cálculo estimado del GameOver */}
                 <span className="text-xl font-bold text-amber-500">+{Math.floor(score / (practiceMode === 'scholar' ? 30 : practiceMode === 'proofreader' ? 25 : practiceMode === 'anagram' ? 20 : 15))}</span>
               </div>
             </div>
+            {/* Extra Life item — use if available */}
+            {(() => {
+              const extraLife = inventory.find(i => i.itemId === 'extra_life' && i.quantity > 0);
+              if (!extraLife || !activeStudent) return null;
+              return (
+                <button
+                  onClick={async () => {
+                    await consumeInventoryItem(extraLife.id, extraLife.quantity);
+                    setInventory(inv => inv.map(i => i.id === extraLife.id ? { ...i, quantity: i.quantity - 1 } : i));
+                    setLives(3);
+                    setGameOver(false);
+                    nextWord();
+                  }}
+                  className="w-full py-3 mb-3 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-md transition-all"
+                >
+                  <Shield size={18} /> Use Extra Life ({extraLife.quantity} left)
+                </button>
+              );
+            })()}
             <button
               onClick={startGame}
               className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-stone-900 rounded-2xl font-bold shadow-lg transition-all hover:-translate-y-1"
@@ -647,7 +739,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                             onClick={() => handleLetterClick(letter, index)}
                             className="w-11 h-11 bg-stone-50 border border-stone-200 border-b-[3px] border-b-stone-300 rounded-lg font-black text-lg text-stone-800 shadow-sm hover:border-b-amber-400 hover:bg-white transition-all select-none"
                           >
-                            {letter.toUpperCase()}
+                            {letter}
                           </motion.button>
                         ))
                       )}
@@ -667,7 +759,7 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                           onClick={() => handleRemoveLetter(index)}
                           className="w-11 h-11 bg-stone-900 text-amber-400 border-b-[3px] border-b-stone-700 rounded-lg font-black text-lg shadow-md hover:bg-stone-800 transition-all select-none"
                         >
-                          {letter.toUpperCase()}
+                          {letter}
                         </motion.button>
                       ))}
                       {selectedLetters.length === 0 && (

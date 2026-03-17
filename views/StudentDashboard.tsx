@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StudentProfile, Achievement, ShopItem, InventoryItem, Vendor, Sponsor } from '../types';
-import { Trophy, Flame, Star, Medal, Crown, Target, Zap, BookOpen, Award, ShoppingBag, Lock, Unlock, Coins, MapPin } from 'lucide-react';
-import { fetchStudentAchievements, fetchLeaderboard, purchaseItem, fetchStudentInventory, isSupabaseConfigured, fetchVendors, fetchSponsors } from '../services/supabaseData';
+import { fetchStudentAchievements, fetchLeaderboard, purchaseItem, fetchStudentInventory, isSupabaseConfigured, fetchVendors, fetchSponsors, checkAndUnlockAchievements, fetchStudentWordStats } from '../services/supabaseData';
+import { Trophy, Flame, Star, Medal, Crown, Target, Zap, BookOpen, Award, ShoppingBag, Coins, Heart, Shield, Sparkles, Lock, CheckCircle, Pen } from 'lucide-react';
 
 interface StudentDashboardProps {
     student: StudentProfile;
@@ -13,9 +13,30 @@ const SHOP_ITEMS: ShopItem[] = [
     {
         id: 'streak_freeze',
         name: 'Streak Freeze',
-        description: 'Protect your streak for one missed day.',
+        description: 'Protect your streak for one missed day. Used automatically.',
         cost: 50,
         icon: Flame
+    },
+    {
+        id: 'streak_shield',
+        name: 'Streak Shield',
+        description: 'Budget streak protector. Shields one missed day.',
+        cost: 30,
+        icon: Shield
+    },
+    {
+        id: 'extra_life',
+        name: 'Extra Life',
+        description: 'Restore 3 lives during a game when you run out.',
+        cost: 40,
+        icon: Heart
+    },
+    {
+        id: 'double_coins',
+        name: 'Double Coins',
+        description: 'Earn 2x BeeCoins for your next 10 correct answers.',
+        cost: 80,
+        icon: Coins
     },
     {
         id: 'double_xp',
@@ -23,7 +44,7 @@ const SHOP_ITEMS: ShopItem[] = [
         description: 'Earn 2x XP for the next 30 minutes.',
         cost: 100,
         icon: Zap
-    }
+    },
 ];
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onStartPractice, onRefreshStudent }) => {
@@ -44,11 +65,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
 
     const loadDashboardData = async () => {
         try {
-            // Load achievements
-            const earned = await fetchStudentAchievements(student.id);
-            setAchievements(earned);
-
-            // Load rank (this is a bit heavy, in a real app we might optimize this)
+            // Load rank first — needed for achievement context
             const leaderboard = await fetchLeaderboard(student.grade);
             const studentRank = leaderboard.findIndex(s => s.id === student.id) + 1;
             setRank(studentRank > 0 ? studentRank : null);
@@ -57,13 +74,34 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
             const inv = await fetchStudentInventory(student.id);
             setInventory(inv);
 
+            // Calculate total correct
+            const stats = await fetchStudentWordStats(student.id);
+            const totalCorrectAnswers = stats.filter((s: any) => s.is_correct).length;
+
+            // Auto-grant any achievements the student qualifies for but hasn't received yet.
+            // This fixes existing high-XP students whose badges were never saved.
+            await checkAndUnlockAchievements(student.id, {
+                totalXp: student.total_xp ?? 0,
+                currentStreak: student.current_streak ?? 0,
+                leaderboardRank: studentRank > 0 ? studentRank : 99999,
+                totalCorrectAnswers,
+                coinsBalance: student.coins ?? 0,
+                inventoryItemCount: inv.length,
+            });
+
+            // Now load the (freshly updated) achievements
+            const earned = await fetchStudentAchievements(student.id);
+            setAchievements(earned);
+
+
+
             // Load Vendors and Sponsors
             const v = await fetchVendors();
             setVendors(v);
             const s = await fetchSponsors();
             setSponsors(s);
         } catch (error) {
-            console.error("Error loading dashboard data", error);
+            console.error('Error loading dashboard data', error);
         }
     };
 
@@ -80,13 +118,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                 } else {
                     setInventory(inv => [...inv, { id: 'temp', studentId: student.id, itemId: item.id, quantity: 1, purchasedAt: new Date().toISOString() }]);
                 }
-                // Ideally trigger a refresh of student data to update coins UI
-                alert(`Purchased ${item.name}!`);
+                // Refresh student data so coin balance updates in the header
+                if (onRefreshStudent) onRefreshStudent();
+                alert(`¡Compra exitosa! Ahora tienes "${item.name}" en tu inventario.`);
             } else {
-                alert("Purchase failed. Try again.");
+                alert('Compra fallida. Es posible que no tengas suficientes BeeCoins o que haya un error. Intenta de nuevo.');
             }
         } catch (e) {
-            console.error("Purchase error", e);
+            console.error('Purchase error', e);
+            alert('Hubo un error al procesar la compra. Intenta de nuevo.');
         } finally {
             setPurchasing(null);
         }
@@ -115,13 +155,77 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
 
     // --- Badges Config ---
     const allBadges = [
-        { key: 'first_win', name: 'First Victory', icon: Star, description: 'Complete your first session' },
-        { key: 'streak_3', name: 'On Fire', icon: Flame, description: '3 Day Streak' },
-        { key: 'xp_1000', name: 'Kilo Speller', icon: Zap, description: 'Earn 1000 XP' },
-        { key: 'perfect_round', name: 'Perfectionist', icon: Target, description: '100% Correct in a session' },
-        { key: 'champion', name: 'Champion', icon: Trophy, description: 'Reach #1 in Leaderboard' },
-        { key: 'master', name: 'The Master', icon: Crown, description: 'Reach Master Level' },
+        // Milestone
+        { key: 'first_win',       name: 'First Victory',    icon: Star,      description: 'Get your first correct answer',        color: 'amber'  },
+
+        // Streaks
+        { key: 'streak_3',        name: 'On Fire',           icon: Flame,     description: 'Maintain a 3-day streak',               color: 'orange' },
+        { key: 'streak_7',        name: 'Week Warrior',      icon: Flame,     description: 'Maintain a 7-day streak',               color: 'orange' },
+        { key: 'streak_14',       name: 'Unstoppable',       icon: Flame,     description: 'Maintain a 14-day streak',              color: 'orange' },
+        { key: 'streak_30',       name: 'Legend Streak',     icon: Flame,     description: 'Maintain a 30-day streak',              color: 'red'    },
+        { key: 'streak_60',       name: 'Iron Will',         icon: Flame,     description: 'Maintain a 60-day streak',              color: 'red'    },
+        { key: 'streak_100',      name: 'Century Club',      icon: Flame,     description: 'Maintain a 100-day streak',             color: 'rose'   },
+
+        // XP Tiers
+        { key: 'xp_100',          name: 'First Steps',       icon: Zap,       description: 'Earn 100 XP',                           color: 'blue'   },
+        { key: 'xp_500',          name: 'Rising Star',       icon: Zap,       description: 'Earn 500 XP',                           color: 'blue'   },
+        { key: 'xp_1000',         name: 'Kilo Speller',      icon: Zap,       description: 'Earn 1,000 XP',                         color: 'blue'   },
+        { key: 'xp_2500',         name: 'XP Hoarder',        icon: Zap,       description: 'Earn 2,500 XP',                         color: 'blue'   },
+        { key: 'xp_5000',         name: 'Mega Speller',      icon: Zap,       description: 'Earn 5,000 XP',                         color: 'indigo' },
+        { key: 'xp_10000',        name: 'Grand Master XP',   icon: Zap,       description: 'Earn 10,000 XP',                        color: 'purple' },
+        { key: 'xp_15000',        name: 'Spellcaster',       icon: Zap,       description: 'Earn 15,000 XP',                        color: 'purple' },
+        { key: 'xp_25000',        name: 'XP Titan',          icon: Zap,       description: 'Earn 25,000 XP',                        color: 'purple' },
+        { key: 'xp_50000',        name: 'XP God',            icon: Zap,       description: 'Earn 50,000 XP',                        color: 'pink'   },
+
+        // In-Session Streaks
+        { key: 'hotstreak_10',    name: 'Heating Up',        icon: Target,    description: '10 correct answers in a row',           color: 'green'  },
+        { key: 'perfect_round',   name: 'Perfectionist',     icon: Target,    description: '20 correct answers in a row',           color: 'green'  },
+        { key: 'hotstreak_30',    name: 'Laser Focus',       icon: Target,    description: '30 correct answers in a row',           color: 'emerald'},
+        { key: 'hotstreak_50',    name: 'Unbreakable',       icon: Target,    description: '50 correct answers in a row',           color: 'emerald'},
+
+        // Speed
+        { key: 'speed_demon',     name: 'Speed Demon',       icon: Zap,       description: 'Answer correctly in under 3 seconds',   color: 'yellow' },
+
+        // Total Correct Answers
+        { key: 'correct_50',      name: 'Word Finder',       icon: BookOpen,  description: '50 total correct words',                color: 'teal'   },
+        { key: 'correct_200',     name: 'Vocab Builder',     icon: BookOpen,  description: '200 total correct words',               color: 'teal'   },
+        { key: 'correct_500',     name: 'Dictionary Mind',   icon: BookOpen,  description: '500 total correct words',               color: 'teal'   },
+        { key: 'correct_1000',    name: 'Lexicon Master',    icon: BookOpen,  description: '1,000 total correct words',             color: 'cyan'   },
+        { key: 'correct_2500',    name: 'Walking Thesaurus', icon: BookOpen,  description: '2,500 total correct words',             color: 'cyan'   },
+
+        // Rank
+        { key: 'top_5',           name: 'Top 5 Finisher',    icon: Medal,     description: 'Reach top 5 on the leaderboard',        color: 'gold'   },
+        { key: 'top_3',           name: 'Podium Finisher',   icon: Medal,     description: 'Reach top 3 on the leaderboard',        color: 'gold'   },
+        { key: 'champion',        name: 'Champion',          icon: Trophy,    description: 'Reach #1 on the leaderboard',           color: 'gold'   },
+
+        // Economy
+        { key: 'coins_100',       name: 'Bee Saver',         icon: Coins,     description: 'Accumulate 100 BeeCoins',               color: 'lime'   },
+        { key: 'coins_500',       name: 'Bee Tycoon',        icon: Coins,     description: 'Accumulate 500 BeeCoins',               color: 'lime'   },
+        { key: 'first_purchase',  name: 'First Purchase',    icon: ShoppingBag,description: 'Buy your first item from the shop',    color: 'amber'  },
+        { key: 'collector',       name: 'The Collector',     icon: ShoppingBag,description: 'Own 3 or more items simultaneously',   color: 'amber'  },
+
+        // Prestige
+        { key: 'master',          name: 'The Master',        icon: Crown,     description: 'Reach Master rank (7,001+ XP)',         color: 'purple' },
     ];
+
+    // Color palette for unlocked badge cards
+    const badgeColors: Record<string, { bg: string; ring: string; icon: string; glow: string }> = {
+        amber:  { bg: 'bg-amber-50',   ring: 'ring-amber-400',   icon: 'text-amber-500',  glow: '0 0 18px rgba(251,191,36,0.55)'  },
+        orange: { bg: 'bg-orange-50',  ring: 'ring-orange-400',  icon: 'text-orange-500', glow: '0 0 18px rgba(249,115,22,0.5)'   },
+        red:    { bg: 'bg-red-50',     ring: 'ring-red-400',     icon: 'text-red-500',    glow: '0 0 18px rgba(239,68,68,0.5)'    },
+        rose:   { bg: 'bg-rose-50',    ring: 'ring-rose-400',    icon: 'text-rose-500',   glow: '0 0 18px rgba(244,63,94,0.5)'    },
+        blue:   { bg: 'bg-blue-50',    ring: 'ring-blue-400',    icon: 'text-blue-500',   glow: '0 0 18px rgba(59,130,246,0.5)'   },
+        indigo: { bg: 'bg-indigo-50',  ring: 'ring-indigo-400',  icon: 'text-indigo-500', glow: '0 0 18px rgba(99,102,241,0.5)'   },
+        purple: { bg: 'bg-purple-50',  ring: 'ring-purple-400',  icon: 'text-purple-500', glow: '0 0 20px rgba(168,85,247,0.6)'   },
+        pink:   { bg: 'bg-pink-50',    ring: 'ring-pink-400',    icon: 'text-pink-500',   glow: '0 0 18px rgba(236,72,153,0.5)'   },
+        green:  { bg: 'bg-green-50',   ring: 'ring-green-400',   icon: 'text-green-500',  glow: '0 0 18px rgba(34,197,94,0.5)'    },
+        emerald:{ bg: 'bg-emerald-50', ring: 'ring-emerald-400', icon: 'text-emerald-500',glow: '0 0 18px rgba(16,185,129,0.5)'   },
+        teal:   { bg: 'bg-teal-50',    ring: 'ring-teal-400',    icon: 'text-teal-500',   glow: '0 0 18px rgba(20,184,166,0.5)'   },
+        cyan:   { bg: 'bg-cyan-50',    ring: 'ring-cyan-400',    icon: 'text-cyan-500',   glow: '0 0 18px rgba(6,182,212,0.5)'    },
+        yellow: { bg: 'bg-yellow-50',  ring: 'ring-yellow-400',  icon: 'text-yellow-500', glow: '0 0 18px rgba(234,179,8,0.5)'    },
+        lime:   { bg: 'bg-lime-50',    ring: 'ring-lime-400',    icon: 'text-lime-500',   glow: '0 0 18px rgba(132,204,22,0.5)'   },
+        gold:   { bg: 'bg-amber-50',   ring: 'ring-amber-500',   icon: 'text-amber-600',  glow: '0 0 22px rgba(217,119,6,0.7)'    },
+    };
 
     return (
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-fade-in p-3 sm:p-4 mb-20">
@@ -313,26 +417,43 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-200">
                     <h3 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2">
                         <Award className="text-yellow-500" /> Achievements
+                        <span className="ml-auto text-xs font-semibold text-stone-400">{achievements.length}/{allBadges.length} unlocked</span>
                     </h3>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                         {allBadges.map(badge => {
                             const isUnlocked = achievements.some(a => a.badgeKey === badge.key);
                             const BadgeIcon = badge.icon;
+                            const palette = badgeColors[badge.color] ?? badgeColors['amber'];
 
                             return (
                                 <div
                                     key={badge.key}
-                                    className={`p-3 rounded-2xl border text-center transition-all ${isUnlocked
-                                        ? 'bg-yellow-50 border-yellow-200 shadow-sm scale-100'
-                                        : 'bg-stone-50 border-stone-100 grayscale opacity-60'
-                                        }`}
+                                    className={`p-3 rounded-2xl border-2 text-center transition-all duration-300 relative overflow-hidden ${
+                                        isUnlocked
+                                            ? `${palette.bg} border-transparent ring-2 ${palette.ring}`
+                                            : 'bg-stone-50 border-stone-100 grayscale opacity-50'
+                                    }`}
+                                    style={isUnlocked ? { boxShadow: palette.glow } : {}}
                                 >
-                                    <div className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-2 ${isUnlocked ? 'bg-yellow-100 text-yellow-600' : 'bg-stone-200 text-stone-400'
-                                        }`}>
+                                    {/* Shine overlay for unlocked */}
+                                    {isUnlocked && (
+                                        <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none rounded-2xl" />
+                                    )}
+                                    <div className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-2 relative z-10 ${
+                                        isUnlocked ? `bg-white shadow-md ${palette.icon}` : 'bg-stone-200 text-stone-400'
+                                    }`}>
                                         <BadgeIcon size={20} />
                                     </div>
-                                    <h4 className="font-bold text-xs text-stone-800 mb-0.5 leading-tight">{badge.name}</h4>
+                                    <h4 className={`font-bold text-xs mb-0.5 leading-tight relative z-10 ${
+                                        isUnlocked ? 'text-stone-900' : 'text-stone-400'
+                                    }`}>{badge.name}</h4>
+                                    <p className={`text-[10px] leading-tight relative z-10 ${
+                                        isUnlocked ? 'text-stone-500' : 'text-stone-400'
+                                    }`}>{badge.description}</p>
+                                    {isUnlocked && (
+                                        <CheckCircle size={12} className={`absolute top-2 right-2 ${palette.icon} opacity-80`} />
+                                    )}
                                 </div>
                             );
                         })}
@@ -345,3 +466,4 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
         </div>
     );
 };
+

@@ -673,6 +673,130 @@ export async function fetchStudentAchievements(studentId: string): Promise<any[]
   }
 }
 
+export async function unlockAchievement(studentId: string, badgeKey: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  try {
+    // Check if already unlocked to avoid duplicates
+    const { data: existing } = await supabase
+      .from('student_achievements')
+      .select('id')
+      .eq('student_id', studentId)
+      .eq('badge_key', badgeKey)
+      .single();
+
+    if (existing) return false; // Already unlocked
+
+    const { error } = await supabase
+      .from('student_achievements')
+      .insert({ student_id: studentId, badge_key: badgeKey });
+
+    if (error) {
+      console.warn('Could not unlock achievement:', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Evaluates all achievement conditions for a student and unlocks any newly earned ones.
+ * Call this after any significant game event (correct answer, session end, etc.)
+ * Returns an array of newly unlocked badge keys so the UI can show a celebration.
+ */
+export async function checkAndUnlockAchievements(
+  studentId: string,
+  context: {
+    totalXp?: number;
+    currentStreak?: number;
+    sessionCorrectStreak?: number;  // consecutive correct in current session
+    leaderboardRank?: number;
+    timeTakenSeconds?: number;      // time of last answer (speed_demon)
+    totalCorrectAnswers?: number;   // all-time correct answers
+    coinsBalance?: number;          // current coin balance
+    inventoryItemCount?: number;    // # of distinct items owned
+  }
+): Promise<string[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const existing = await fetchStudentAchievements(studentId);
+  const unlockedKeys = new Set(existing.map((a: any) => a.badgeKey));
+  const newlyUnlocked: string[] = [];
+
+  const tryUnlock = async (key: string, condition: boolean) => {
+    if (condition && !unlockedKeys.has(key)) {
+      const success = await unlockAchievement(studentId, key);
+      if (success) newlyUnlocked.push(key);
+    }
+  };
+
+  const xp       = context.totalXp ?? 0;
+  const streak   = context.currentStreak ?? 0;
+  const sess     = context.sessionCorrectStreak ?? 0;
+  const rank     = context.leaderboardRank ?? 99999;
+  const t        = context.timeTakenSeconds ?? 99;
+  const correct  = context.totalCorrectAnswers ?? 0;
+  const coins    = context.coinsBalance ?? 0;
+  const items    = context.inventoryItemCount ?? 0;
+
+  await Promise.all([
+    // ── Milestone ─────────────────────────────────────
+    tryUnlock('first_win',        xp > 0 || sess >= 1),
+
+    // ── Daily Streak ──────────────────────────────────
+    tryUnlock('streak_3',         streak >= 3),
+    tryUnlock('streak_7',         streak >= 7),
+    tryUnlock('streak_14',        streak >= 14),
+    tryUnlock('streak_30',        streak >= 30),
+    tryUnlock('streak_60',        streak >= 60),
+    tryUnlock('streak_100',       streak >= 100),
+
+    // ── XP Tiers ──────────────────────────────────────
+    tryUnlock('xp_100',           xp >= 100),
+    tryUnlock('xp_500',           xp >= 500),
+    tryUnlock('xp_1000',          xp >= 1000),
+    tryUnlock('xp_2500',          xp >= 2500),
+    tryUnlock('xp_5000',          xp >= 5000),
+    tryUnlock('xp_10000',         xp >= 10000),
+    tryUnlock('xp_15000',         xp >= 15000),
+    tryUnlock('xp_25000',         xp >= 25000),
+    tryUnlock('xp_50000',         xp >= 50000),
+
+    // ── In-Session Streak ─────────────────────────────
+    tryUnlock('hotstreak_10',     sess >= 10),
+    tryUnlock('perfect_round',    sess >= 20),   // Perfectionist — 20 in a row
+    tryUnlock('hotstreak_30',     sess >= 30),
+    tryUnlock('hotstreak_50',     sess >= 50),
+
+    // ── Speed ─────────────────────────────────────────
+    tryUnlock('speed_demon',      t > 0 && t <= 3),
+
+    // ── Total Correct Answers ─────────────────────────
+    tryUnlock('correct_50',       correct >= 50),
+    tryUnlock('correct_200',      correct >= 200),
+    tryUnlock('correct_500',      correct >= 500),
+    tryUnlock('correct_1000',     correct >= 1000),
+    tryUnlock('correct_2500',     correct >= 2500),
+
+    // ── Rank ──────────────────────────────────────────
+    tryUnlock('top_5',            rank >= 1 && rank <= 5),
+    tryUnlock('top_3',            rank >= 1 && rank <= 3),
+    tryUnlock('champion',         rank === 1),
+
+    // ── Economy ───────────────────────────────────────
+    tryUnlock('coins_100',        coins >= 100),
+    tryUnlock('coins_500',        coins >= 500),
+    tryUnlock('first_purchase',   items >= 1),
+    tryUnlock('collector',        items >= 3),
+
+    // ── Prestige ──────────────────────────────────────
+    tryUnlock('master',           xp >= 7001),
+  ]);
+
+  return newlyUnlocked;
+}
+
 // --- Gamification & Shop
 export async function fetchStudentInventory(studentId: string): Promise<any[]> {
   if (!isSupabaseConfigured()) return [];
@@ -715,10 +839,7 @@ export async function purchaseItem(studentId: string, itemId: string, cost: numb
 
   const newBalance = (student.coins || 0) - cost;
 
-  // 2. Transaction (Deduct coins + Add Item)
-  // Note: simpler to do sequentially without Rpc for now, though not atomic.
-
-  // Update coins
+  // 2. Deduct coins first
   const { error: updateError } = await supabase
     .from('students')
     .update({ coins: newBalance })
@@ -726,8 +847,7 @@ export async function purchaseItem(studentId: string, itemId: string, cost: numb
 
   if (updateError) return false;
 
-  // Add item
-  // Check if exists first to increment quantity
+  // 3. Add item to inventory — check if exists first to increment quantity
   const { data: existing } = await supabase
     .from('student_items')
     .select('*')
@@ -735,22 +855,50 @@ export async function purchaseItem(studentId: string, itemId: string, cost: numb
     .eq('item_id', itemId)
     .single();
 
+  let itemError: any = null;
+
   if (existing) {
-    await supabase
+    const { error } = await supabase
       .from('student_items')
       .update({ quantity: existing.quantity + 1 })
       .eq('id', existing.id);
+    itemError = error;
   } else {
-    await supabase
+    const { error } = await supabase
       .from('student_items')
       .insert({
         student_id: studentId,
         item_id: itemId,
         quantity: 1
       });
+    itemError = error;
+  }
+
+  // 4. If saving the item failed, refund the coins to avoid silent loss
+  if (itemError) {
+    console.error('Error saving item to inventory, refunding coins:', itemError);
+    await supabase
+      .from('students')
+      .update({ coins: student.coins })
+      .eq('id', studentId);
+    return false;
   }
 
   return true;
+}
+
+export async function consumeInventoryItem(inventoryRowId: string, currentQuantity: number): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  try {
+    if (currentQuantity <= 1) {
+      await supabase.from('student_items').delete().eq('id', inventoryRowId);
+    } else {
+      await supabase.from('student_items').update({ quantity: currentQuantity - 1 }).eq('id', inventoryRowId);
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 export async function addCoins(studentId: string, amount: number): Promise<void> {
@@ -770,7 +918,9 @@ export async function addCoins(studentId: string, amount: number): Promise<void>
 export async function checkAndUpdateStreak(studentId: string): Promise<{ streak: number, message?: string }> {
   if (!isSupabaseConfigured()) return { streak: 0 };
 
-  const today = new Date().toISOString().split('T')[0];
+  // Use local date to avoid UTC timezone mismatch for students in Latin America (UTC-4/UTC-5)
+  const todayLocal = new Date();
+  const today = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth() + 1).padStart(2, '0')}-${String(todayLocal.getDate()).padStart(2, '0')}`;
 
   const { data: student, error } = await supabase
     .from('students')
@@ -787,10 +937,10 @@ export async function checkAndUpdateStreak(studentId: string): Promise<{ streak:
     return { streak: student.current_streak || 0 };
   }
 
-  // Check if yesterday
+  // Check if yesterday — use local date to stay consistent with the local-date `today` above
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
   if (lastDate === yesterdayStr) {
     // Increment streak
@@ -802,45 +952,40 @@ export async function checkAndUpdateStreak(studentId: string): Promise<{ streak:
     return { streak: newStreak, message: "Streak Increased!" };
   } else {
     // Missed a day (or more)
-    // Check for Streak Freeze
+    // Check for any streak protection item (streak_freeze preferred, then streak_shield)
     const { data: freezeItem } = await supabase
       .from('student_items')
       .select('*')
       .eq('student_id', studentId)
-      .eq('item_id', 'streak_freeze')
+      .in('item_id', ['streak_freeze', 'streak_shield'])
       .gt('quantity', 0)
+      .order('item_id', { ascending: true }) // streak_freeze < streak_shield alphabetically — prefer freeze
+      .limit(1)
       .single();
 
     if (freezeItem) {
-      // Use Streak Freeze
+      // Use the protection item (streak_freeze or streak_shield)
       await supabase
         .from('student_items')
         .update({ quantity: freezeItem.quantity - 1 })
         .eq('id', freezeItem.id);
-
-      // Keep streak (don't increment, but don't reset? Or increment? Usually you carry over)
-      // Let's say we Keep it and just update the date to today so they don't lose it.
-      // Actually, if they practice *today*, they should keep the streak AND increment it, effectively bridging the gap.
-      // But if the gap is huge (e.g. 5 days ago), one freeze might not be enough?
-      // Simplified: If last practice was NOT yesterday, but we have a freeze, we consume it to "pretend" we practiced yesterday.
-      // So we effectively Increment the old streak.
 
       const savedStreak = (student.current_streak || 0) + 1;
       await supabase
         .from('students')
         .update({ current_streak: savedStreak, last_practice_date: today })
         .eq('id', studentId);
-      return { streak: savedStreak, message: "Streak Frozen Used! Streak Saved!" };
+      const itemName = freezeItem.item_id === 'streak_freeze' ? 'Streak Freeze' : 'Streak Shield';
+      return { streak: savedStreak, message: `${itemName} used! Streak saved!` };
     } else {
       // Reset Streak
-      // If it's the very first time (lastDate is null), streak becomes 1.
       const newStreak = 1;
       await supabase
         .from('students')
         .update({ current_streak: newStreak, last_practice_date: today })
         .eq('id', studentId);
 
-      return { streak: newStreak, message: "Streak Reset (Missed a day)" };
+      return { streak: newStreak, message: 'Streak reset — missed a day.' };
     }
   }
 }
