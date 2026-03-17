@@ -35,6 +35,7 @@ export interface StudentProfile {
   current_streak?: number;
   last_practice_date?: string;
   coins?: number;
+  double_xp_ends_at?: string;
 }
 
 export interface Achievement {

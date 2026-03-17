@@ -375,6 +375,9 @@ const AppContent: React.FC = () => {
         password: data.password,
         total_xp: data.total_xp ?? 0,
         coins: data.coins,
+        current_streak: data.current_streak,
+        last_practice_date: data.last_practice_date ?? undefined,
+        double_xp_ends_at: data.double_xp_ends_at ?? undefined,
       });
     }
   };

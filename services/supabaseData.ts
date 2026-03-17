@@ -163,6 +163,10 @@ export async function fetchStudents(): Promise<StudentProfile[]> {
     username: row.username ?? undefined,
     password: row.password ?? undefined,
     total_xp: row.total_xp ?? 0,
+    coins: row.coins ?? 0,
+    current_streak: row.current_streak ?? 0,
+    last_practice_date: row.last_practice_date ?? undefined,
+    double_xp_ends_at: row.double_xp_ends_at ?? undefined,
   }));
 }
 
@@ -597,6 +601,7 @@ export async function studentLogin(username: string): Promise<StudentProfile | n
     username: data.username,
     password: data.password,
     total_xp: data.total_xp ?? 0,
+    double_xp_ends_at: data.double_xp_ends_at ?? undefined,
   };
 }
 
@@ -640,6 +645,7 @@ export async function fetchLeaderboard(grade?: number): Promise<StudentProfile[]
     total_xp: row.total_xp,
     current_streak: row.current_streak,
     last_practice_date: row.last_practice_date,
+    double_xp_ends_at: row.double_xp_ends_at ?? undefined,
   }));
 }
 
@@ -912,6 +918,26 @@ export async function addCoins(studentId: string, amount: number): Promise<void>
   if (student) {
     const current = student.coins || 0;
     await supabase.from('students').update({ coins: current + amount }).eq('id', studentId);
+  }
+}
+
+export async function activateDoubleXP(studentId: string, inventoryRowId: string, currentQuantity: number): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  try {
+    const endsAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 mins from now
+    const { error: updateError } = await supabase
+      .from('students')
+      .update({ double_xp_ends_at: endsAt })
+      .eq('id', studentId);
+      
+    if (updateError) throw updateError;
+    
+    // Consume the potion
+    await consumeInventoryItem(inventoryRowId, currentQuantity);
+    return true;
+  } catch (e) {
+    console.error("Error activating double xp:", e);
+    return false;
   }
 }
 

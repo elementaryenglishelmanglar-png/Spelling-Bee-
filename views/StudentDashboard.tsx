@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StudentProfile, Achievement, ShopItem, InventoryItem, Vendor, Sponsor } from '../types';
-import { fetchStudentAchievements, fetchLeaderboard, purchaseItem, fetchStudentInventory, isSupabaseConfigured, fetchVendors, fetchSponsors, checkAndUnlockAchievements, fetchStudentWordStats } from '../services/supabaseData';
-import { Trophy, Flame, Star, Medal, Crown, Target, Zap, BookOpen, Award, ShoppingBag, Coins, Heart, Shield, Sparkles, Lock, CheckCircle, Pen } from 'lucide-react';
+import { fetchStudentAchievements, fetchLeaderboard, purchaseItem, fetchStudentInventory, isSupabaseConfigured, fetchVendors, fetchSponsors, checkAndUnlockAchievements, fetchStudentWordStats, activateDoubleXP } from '../services/supabaseData';
+import { Trophy, Flame, Star, Medal, Crown, Target, Zap, BookOpen, Award, ShoppingBag, Coins, Heart, Shield, Sparkles, Lock, CheckCircle, Pen, Timer } from 'lucide-react';
 
 interface StudentDashboardProps {
     student: StudentProfile;
@@ -54,6 +54,62 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
     const [purchasing, setPurchasing] = useState<string | null>(null);
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+
+    const [doubleXpTimeLeft, setDoubleXpTimeLeft] = useState<number>(0);
+    const [usingPotion, setUsingPotion] = useState(false);
+
+    useEffect(() => {
+        if (!student.double_xp_ends_at) {
+             setDoubleXpTimeLeft(0);
+             return;
+        }
+        
+        const calculateTimeLeft = () => {
+             const endsAt = new Date(student.double_xp_ends_at!).getTime();
+             const now = new Date().getTime();
+             return Math.max(0, Math.floor((endsAt - now) / 1000));
+        };
+        
+        setDoubleXpTimeLeft(calculateTimeLeft());
+        
+        const timer = setInterval(() => {
+             const left = calculateTimeLeft();
+             setDoubleXpTimeLeft(left);
+             if (left <= 0) clearInterval(timer);
+        }, 1000);
+        
+        return () => clearInterval(timer);
+    }, [student.double_xp_ends_at]);
+    
+    const formatTime = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    };
+    
+    const isDoubleXpActive = doubleXpTimeLeft > 0;
+
+    const handleUseDoubleXp = async () => {
+        const potion = inventory.find(i => i.itemId === 'double_xp');
+        if (!potion || potion.quantity < 1 || isDoubleXpActive) return;
+        
+        setUsingPotion(true);
+        try {
+            const success = await activateDoubleXP(student.id, potion.id, potion.quantity);
+            if (success) {
+                if (onRefreshStudent) onRefreshStudent();
+                if (potion.quantity <= 1) {
+                    setInventory(inv => inv.filter(i => i.id !== potion.id));
+                } else {
+                    setInventory(inv => inv.map(i => i.id === potion.id ? { ...i, quantity: i.quantity - 1 } : i));
+                }
+            } else {
+                 alert('Hubo un error al usar la poción. Intenta de nuevo.');
+            }
+        } finally {
+            setUsingPotion(false);
+        }
+    };
 
     // Force re-render on coin update if necessary, though simpler to rely on parent passing fresh student
     // For now we assume student prop is fresh or we don't handle real-time coin updates without refresh.
@@ -255,6 +311,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                         <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wide">Balance</span>
                         <span className="font-black text-amber-700 text-sm whitespace-nowrap">{student.coins ?? 0} 🐝</span>
                     </div>
+                    {/* Double XP Timer */}
+                    {isDoubleXpActive && (
+                        <div className="bg-purple-50 px-3 py-2 rounded-xl border border-purple-200 flex flex-col items-center shrink-0 shadow-sm relative overflow-hidden">
+                            <div className="absolute inset-0 bg-purple-400 opacity-20 animate-pulse"></div>
+                            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wide flex items-center gap-1 relative z-10"><Zap size={10} /> 2X XP</span>
+                            <span className="font-black text-purple-700 text-sm whitespace-nowrap relative z-10">{formatTime(doubleXpTimeLeft)}</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* CTA Buttons — w-full, unified amber primary style */}
@@ -384,13 +448,24 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                                                     </p>
                                                     <p className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">BeeCoins</p>
                                                 </div>
-                                                <button
-                                                    onClick={() => handlePurchase(item)}
-                                                    disabled={!canAfford || purchasing === item.id}
-                                                    className="text-xs font-bold text-yellow-600 hover:text-yellow-700 disabled:opacity-50"
-                                                >
-                                                    Buy Another ({item.cost})
-                                                </button>
+                                                <div className="flex flex-col gap-1.5 mt-2">
+                                                    {item.id === 'double_xp' && (
+                                                        <button
+                                                            onClick={handleUseDoubleXp}
+                                                            disabled={isDoubleXpActive || usingPotion}
+                                                            className={`text-xs font-bold px-3 py-1.5 rounded-lg text-white ${isDoubleXpActive ? 'bg-stone-400 cursor-not-allowed' : 'bg-purple-500 hover:bg-purple-600 shadow-sm active:scale-95 transition-all'}`}
+                                                        >
+                                                            {isDoubleXpActive ? 'Active' : usingPotion ? 'Activating...' : 'Use Potion'}
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handlePurchase(item)}
+                                                        disabled={!canAfford || purchasing === item.id}
+                                                        className="text-xs font-bold text-yellow-600 hover:text-yellow-700 disabled:opacity-50"
+                                                    >
+                                                        Buy Another ({item.cost})
+                                                    </button>
+                                                </div>
                                             </div>
                                         ) : (
                                             <button

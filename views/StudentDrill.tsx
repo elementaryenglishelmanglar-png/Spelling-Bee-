@@ -96,6 +96,12 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
   const [sessionTotalCorrect, setSessionTotalCorrect] = useState(0);
   const [achievementToast, setAchievementToast] = useState<string | null>(null);
   const [inventory, setInventory] = useState<any[]>([]);
+  const [lastPointsEarned, setLastPointsEarned] = useState(0);
+
+  const isDoubleXpActive = useMemo(() => {
+    if (!activeStudent?.double_xp_ends_at) return false;
+    return new Date(activeStudent.double_xp_ends_at).getTime() > Date.now();
+  }, [activeStudent?.double_xp_ends_at, currentWord]);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -278,10 +284,15 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
     if (isCorrect && usedAudioHint) {
       points = Math.floor(points / 2);
     }
+    
+    if (isCorrect && isDoubleXpActive) {
+      points *= 2;
+    }
 
     if (isCorrect) {
       setFeedback('correct');
       setScore(s => s + points);
+      setLastPointsEarned(points);
       setMascotMessage("Amazing! You found the typo!");
       confetti({
         particleCount: 120,
@@ -444,11 +455,14 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
       points = Math.floor(points / 2);
     }
 
-
+    if (isCorrect && isDoubleXpActive) {
+      points *= 2;
+    }
 
     if (isCorrect) {
       setFeedback('correct');
       setScore(s => s + points);
+      setLastPointsEarned(points);
       setMascotMessage("Amazing! You got it right!");
       confetti({
         particleCount: 120,
@@ -952,7 +966,12 @@ export const StudentDrill: React.FC<StudentDrillProps> = ({ words, activeStudent
                     : <XCircle size={30} />}
                 </div>
                 <h3 className="text-2xl font-black">
-                  {feedback === 'correct' ? `Correct! +${usedAudioHint ? Math.floor((practiceMode === 'scholar' ? 30 : practiceMode === 'proofreader' ? 25 : practiceMode === 'anagram' ? 20 : 15) / 2) : (practiceMode === 'scholar' ? 30 : practiceMode === 'proofreader' ? 25 : practiceMode === 'anagram' ? 20 : 15)} pts` : 'Incorrect'}
+                  {feedback === 'correct' ? (
+                     <div className="flex items-center gap-2 justify-center flex-wrap">
+                        Correct! +{lastPointsEarned} pts
+                        {isDoubleXpActive && <span className="text-xs text-purple-600 font-bold bg-purple-100 px-2 py-1 rounded-full uppercase tracking-wider shadow-sm animate-pulse"><Zap size={10} className="inline mr-1 mb-0.5" />Double XP!</span>}
+                     </div>
+                  ) : 'Incorrect'}
                 </h3>
                 {feedback === 'incorrect' && (
                   <p className="text-stone-600 text-sm mt-1">
