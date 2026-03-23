@@ -680,11 +680,11 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                                                     </h3>
                                                 </div>
                                                 {metaResource && metaResource.description && (
-                                                    <div className="flex items-start sm:items-center gap-2 text-sm bg-white px-3 py-2 rounded-lg border border-amber-200 shadow-sm flex-1 sm:max-w-md w-full">
-                                                        <span className="font-bold text-amber-600 whitespace-nowrap">
+                                                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2 text-sm bg-white p-3 rounded-lg border border-amber-200 shadow-sm flex-1 w-full mt-3 sm:mt-0">
+                                                        <span className="font-bold text-amber-600 flex-shrink-0">
                                                             Challenging words:
                                                         </span>
-                                                        <span className="text-stone-600 font-medium line-clamp-2" title={metaResource.description}>
+                                                        <span className="text-stone-600 font-medium leading-relaxed" style={{ wordBreak: 'break-word' }}>
                                                             {metaResource.description}
                                                         </span>
                                                     </div>
