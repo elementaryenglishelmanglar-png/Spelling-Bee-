@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { School, StudentProfile, Payment, SchoolResource, GradeLevel } from '../types';
-import { fetchSchools, addSchool, updateSchool, deleteSchool, fetchStudents, fetchPayments, updatePayment, fetchSchoolResources, addSchoolResource, deleteSchoolResource } from '../services/supabaseData';
+import { fetchSchools, addSchool, updateSchool, deleteSchool, fetchStudents, fetchPayments, updatePayment, fetchSchoolResources, addSchoolResource, updateSchoolResource, deleteSchoolResource } from '../services/supabaseData';
 import { useToast } from '../lib/toastContext';
 import { LoadingOverlay } from '../components/LoadingSpinner';
 import { Plus, School as SchoolIcon, Users, ChevronRight, UserCheck, Trash2, Edit2, DollarSign, Upload, Image as ImageIcon, CheckCircle, XCircle, Clock, FileText, Trophy, Download, Link as LinkIcon } from 'lucide-react';
@@ -31,6 +31,11 @@ export const InterschoolManager: React.FC = () => {
     const [resourceType, setResourceType] = useState<'pdf' | 'link'>('pdf');
     const [resourceLink, setResourceLink] = useState('');
 
+    // Challenging Words Config
+    const [challengingWordsGrade, setChallengingWordsGrade] = useState<GradeLevel>(1);
+    const [challengingWordsText, setChallengingWordsText] = useState('');
+    const [savingChallengingWords, setSavingChallengingWords] = useState(false);
+
     // Selected photo modal
     const [selectedPhotoInfo, setSelectedPhotoInfo] = useState<{ student: StudentProfile, grade: number } | null>(null);
 
@@ -56,6 +61,43 @@ export const InterschoolManager: React.FC = () => {
             showToast('Error loading interschool data', 'error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const metaResource = resources.find(r => r.grade === challengingWordsGrade && r.fileUrl === 'meta:challenging_words');
+        if (metaResource) {
+            setChallengingWordsText(metaResource.description || '');
+        } else {
+            setChallengingWordsText('');
+        }
+    }, [challengingWordsGrade, resources]);
+
+    const handleSaveChallengingWords = async () => {
+        setSavingChallengingWords(true);
+        try {
+            const existingMeta = resources.find(r => r.grade === challengingWordsGrade && r.fileUrl === 'meta:challenging_words');
+            if (existingMeta) {
+                const updated = await updateSchoolResource(existingMeta.id, { description: challengingWordsText });
+                setResources(prev => prev.map(r => r.id === updated.id ? updated : r));
+                showToast('Challenging words updated', 'success');
+            } else {
+                const newRes = {
+                    id: crypto.randomUUID(),
+                    title: 'Challenging Words Categories',
+                    description: challengingWordsText,
+                    grade: challengingWordsGrade,
+                    fileUrl: 'meta:challenging_words',
+                    createdAt: new Date().toISOString()
+                };
+                const added = await addSchoolResource(newRes, null);
+                setResources(prev => [added, ...prev]);
+                showToast('Challenging words added', 'success');
+            }
+        } catch (e) {
+            showToast('Error saving challenging words', 'error');
+        } finally {
+            setSavingChallengingWords(false);
         }
     };
 
@@ -336,11 +378,49 @@ export const InterschoolManager: React.FC = () => {
                         </form>
                     </div>
 
+                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                        <h3 className="text-lg font-bold text-stone-800 mb-4 flex items-center gap-2">
+                            <FileText size={20} className="text-amber-500" />
+                            Challenging Words Themes Configuration
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                            <div className="md:col-span-1">
+                                <label className="block text-sm font-bold text-stone-700 mb-1">Grade</label>
+                                <select
+                                    value={challengingWordsGrade}
+                                    onChange={e => setChallengingWordsGrade(Number(e.target.value) as GradeLevel)}
+                                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                >
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => <option key={g} value={g}>Grade {g}</option>)}
+                                    <option value="12">Group 3</option>
+                                </select>
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-bold text-stone-700 mb-1">Categories / Themes</label>
+                                <textarea
+                                    value={challengingWordsText}
+                                    onChange={e => setChallengingWordsText(e.target.value)}
+                                    placeholder="e.g. Transportation, fruits and vegetables, family"
+                                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none min-h-[80px]"
+                                />
+                            </div>
+                            <div className="md:col-span-1 flex items-end h-[80px]">
+                                <button
+                                    onClick={handleSaveChallengingWords}
+                                    disabled={savingChallengingWords}
+                                    className="w-full py-2 h-full max-h-[42px] mt-auto bg-amber-500 text-stone-900 rounded-lg font-bold hover:bg-amber-600 disabled:opacity-50 transition-colors"
+                                >
+                                    {savingChallengingWords ? 'Saving...' : 'Save Themes'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
                         <div className="bg-stone-50 px-6 py-4 border-b border-stone-200 font-bold text-stone-700">
                             Available Resources
                         </div>
-                        {resources.length === 0 ? (
+                        {resources.filter(r => r.fileUrl !== 'meta:challenging_words').length === 0 ? (
                             <div className="p-8 text-center text-stone-400 italic">No resources uploaded yet.</div>
                         ) : (
                             <table className="w-full">
@@ -353,7 +433,7 @@ export const InterschoolManager: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {resources.map(r => (
+                                    {resources.filter(r => r.fileUrl !== 'meta:challenging_words').map(r => (
                                         <tr key={r.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
                                             <td className="py-3 px-4">
                                                 <span className="inline-block px-2 py-1 bg-stone-100 text-stone-600 rounded text-xs font-bold">

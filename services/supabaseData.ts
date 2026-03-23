@@ -465,6 +465,34 @@ export async function addSchoolResource(resource: SchoolResource, file: File | n
   };
 }
 
+export async function updateSchoolResource(id: string, updates: Partial<SchoolResource>): Promise<SchoolResource> {
+  if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+  
+  const payload: any = {};
+  if (updates.title !== undefined) payload.title = updates.title;
+  if (updates.description !== undefined) payload.description = updates.description;
+  if (updates.fileUrl !== undefined) payload.file_url = updates.fileUrl;
+  if (updates.grade !== undefined) payload.grade = updates.grade;
+
+  const { data, error } = await supabase
+    .from('school_resources')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    title: data.title,
+    description: data.description,
+    fileUrl: data.file_url,
+    grade: data.grade,
+    createdAt: data.created_at
+  };
+}
+
 export async function deleteSchoolResource(id: string, fileUrl: string): Promise<void> {
   if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
 

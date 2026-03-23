@@ -662,21 +662,36 @@ export const InvitedSchoolDashboard: React.FC<InvitedSchoolDashboardProps> = ({ 
                         ) : (
                             <div className="grid grid-cols-1 gap-6">
                                 {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(grade => {
-                                    const gradeResources = groupedResources[grade];
-                                    if (!gradeResources || gradeResources.length === 0) return null;
+                                    const allGradeResources = groupedResources[grade] || [];
+                                    const metaResource = allGradeResources.find(r => r.fileUrl === 'meta:challenging_words');
+                                    const downloadableResources = allGradeResources.filter(r => r.fileUrl !== 'meta:challenging_words');
+
+                                    if (downloadableResources.length === 0 && !metaResource) return null;
 
                                     return (
                                         <div key={grade} className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
-                                            <div className="bg-stone-50 px-6 py-3 border-b border-stone-200 flex items-center gap-2">
-                                                <span className="w-8 h-8 rounded-lg bg-stone-800 text-yellow-400 flex items-center justify-center font-bold text-sm">
-                                                    {grade === 12 ? 'G3' : `G${grade}`}
-                                                </span>
-                                                <h3 className="font-bold text-stone-700">
-                                                    {grade === 12 ? 'Group 3 Resources' : `Grade ${grade} Resources`}
-                                                </h3>
+                                            <div className="bg-stone-50 px-6 py-4 border-b border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-8 h-8 rounded-lg bg-stone-800 text-yellow-400 flex items-center justify-center font-bold text-sm">
+                                                        {grade === 12 ? 'G3' : `G${grade}`}
+                                                    </span>
+                                                    <h3 className="font-bold text-stone-700">
+                                                        {grade === 12 ? 'Group 3 Resources' : `Grade ${grade} Resources`}
+                                                    </h3>
+                                                </div>
+                                                {metaResource && metaResource.description && (
+                                                    <div className="flex items-start sm:items-center gap-2 text-sm bg-white px-3 py-2 rounded-lg border border-amber-200 shadow-sm flex-1 sm:max-w-md w-full">
+                                                        <span className="font-bold text-amber-600 whitespace-nowrap">
+                                                            Challenging words:
+                                                        </span>
+                                                        <span className="text-stone-600 font-medium line-clamp-2" title={metaResource.description}>
+                                                            {metaResource.description}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                {gradeResources.map(res => (
+                                                {downloadableResources.map(res => (
                                                     <div key={res.id} className="border border-stone-100 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all group">
                                                         <div className="flex justify-between items-start">
                                                             <div className="flex items-center gap-3">
