@@ -13,11 +13,15 @@ export const CHANNEL_NAME = 'spelling-bee-live';
 
 // ─── Command Types ────────────────────────────────────────────────────────────
 
+export type PodiumEntry = { position: 1 | 2 | 3; student: StudentProfile };
+
 export type LiveCommand =
     | { type: 'standby' }
     | { type: 'leaderboard' }
     | { type: 'team-reveal'; students: StudentProfile[]; grade: number }
     | { type: 'spotlight'; student: StudentProfile }
+    | { type: 'slideshow'; students: StudentProfile[]; grade: number; intervalMs: number }
+    | { type: 'podium'; entries: PodiumEntry[] }
     | { type: 'ping' }
     | { type: 'pong' };
 

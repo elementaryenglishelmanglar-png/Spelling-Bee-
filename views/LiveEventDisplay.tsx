@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StudentProfile, Sponsor } from '../types';
 import { fetchLeaderboard, fetchSponsors } from '../services/supabaseData';
-import { useLiveChannel, LiveCommand } from '../lib/liveChannel';
-import { Trophy, Zap, RefreshCw, Maximize2, Crown, Shield, ShieldAlert, Star, Target, Hexagon } from 'lucide-react';
+import { useLiveChannel, LiveCommand, PodiumEntry } from '../lib/liveChannel';
+import { Zap, RefreshCw, Maximize2, Crown, Trophy, Shield, ShieldAlert, Star, Target, Hexagon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-export type DisplayMode = 'standby' | 'leaderboard' | 'team-reveal' | 'spotlight';
+export type DisplayMode = 'standby' | 'leaderboard' | 'team-reveal' | 'spotlight' | 'slideshow' | 'podium';
 type League = 'Diamond' | 'Platinum' | 'Gold' | 'Bronze' | 'Iron' | 'Paper';
 
 interface RankedStudent extends StudentProfile {
@@ -399,62 +399,70 @@ const LiveLeaderboard: React.FC<{ students: RankedStudent[]; onRefresh: () => vo
 );
 
 // ─── MODE 3: Team Reveal (Esports loading screen) ─────────────────────────────
-const TeamRevealCard: React.FC<{ student: StudentProfile; index: number; total: number }> = ({ student, index }) => {
+const TeamRevealCard: React.FC<{ student: StudentProfile; index: number; cols: number }> = ({ student, index, cols }) => {
     const league = getLeague(student.total_xp ?? 0);
     const meta = LEAGUE_META[league];
     const delay = index * 0.1;
+
+    // Card width fills the row evenly (gap is 20px between cards)
+    const cardStyle: React.CSSProperties = {
+        width: `calc((100% - ${(cols - 1) * 20}px) / ${cols})`,
+        maxWidth: '320px',
+        minWidth: '140px',
+    };
 
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 50, rotateY: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0, rotateY: 0 }}
             transition={{ delay, duration: 0.5, type: 'spring', bounce: 0.4 }}
-            className="flex flex-col w-[240px] h-[340px] lg:w-[280px] lg:h-[400px] xl:w-[320px] xl:h-[460px] shrink-0 overflow-hidden rounded-3xl border-2 border-stone-700/60 bg-stone-900/80 backdrop-blur-sm group relative shadow-2xl"
+            className="flex flex-col h-full shrink-0 overflow-hidden rounded-3xl border-2 border-stone-700/60 bg-stone-900/80 backdrop-blur-sm group relative shadow-2xl"
+            style={cardStyle}
         >
             {/* Background glow base */}
             <div className="absolute inset-0 pointer-events-none opacity-20 transition-opacity duration-500 group-hover:opacity-40"
                 style={{ background: `radial-gradient(circle at center, ${meta.cardGlow} 0%, transparent 70%)` }} />
 
-            {/* Photo — auto-stretches. min-h is critical. */}
-            <div className="flex-1 relative overflow-hidden bg-stone-950 min-h-[160px] h-full w-full">
+            {/* Photo */}
+            <div className="flex-1 relative overflow-hidden bg-stone-950 min-h-[120px]">
                 {student.photo ? (
                     <img src={student.photo} alt={student.firstName}
                         className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110" />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-amber-400 font-black opacity-30"
-                        style={{ fontSize: 'clamp(4rem, 10vw, 8rem)' }}>
+                        style={{ fontSize: 'clamp(3rem, 6vw, 6rem)' }}>
                         {student.firstName?.[0]}
                     </div>
                 )}
-                {/* Gradient overlay for text */}
-                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-stone-950 via-stone-950/80 to-transparent" />
-                <div className="absolute inset-0 ring-1 ring-inset ring-white/10" />
+                {/* Gradient overlay for text — subtle */}
+                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-stone-950/80 via-stone-950/30 to-transparent" />
+
             </div>
 
             {/* School Label */}
-            <div className="absolute top-3 right-3 bg-stone-950/80 backdrop-blur border border-stone-800 px-2 py-1 rounded text-[10px] font-bold text-stone-300 max-w-[80%] truncate shadow-lg">
+            <div className="absolute top-2 right-2 bg-stone-950/80 backdrop-blur border border-stone-800 px-2 py-0.5 rounded text-[9px] font-bold text-stone-300 max-w-[80%] truncate shadow-lg">
                 {student.school}
             </div>
 
             {/* Content overlay */}
-            <div className="relative pt-6 pb-4 px-4 flex flex-col items-center text-center -mt-8 backdrop-blur-none border-t border-stone-800/50">
-                <div className="absolute -top-7">
+            <div className="relative pt-5 pb-3 px-3 flex flex-col items-center text-center -mt-6 backdrop-blur-none">
+                <div className="absolute -top-5">
                     <LeagueBadge league={league} hideText />
                 </div>
 
-                <div className="w-full mt-2">
-                    <h3 className="text-white font-black leading-none uppercase tracking-wide truncate shadow-black"
-                        style={{ fontSize: 'clamp(1rem, 2vw, 1.4rem)', textShadow: '0 2px 5px rgba(0,0,0,0.8)' }}>
+                <div className="w-full mt-1">
+                    <h3 className="text-white font-black leading-none uppercase tracking-wide truncate"
+                        style={{ fontSize: 'clamp(0.7rem, 1.4vw, 1.25rem)', textShadow: '0 2px 5px rgba(0,0,0,0.8)' }}>
                         {student.firstName}
                     </h3>
-                    <h3 className="text-stone-400 font-bold leading-tight text-[11px] uppercase tracking-widest mt-1 truncate">
+                    <h3 className="text-stone-400 font-bold leading-tight text-[9px] uppercase tracking-widest mt-0.5 truncate">
                         {student.lastName}
                     </h3>
                 </div>
 
-                <div className="flex items-center gap-1 mt-2 bg-stone-900/80 px-2 py-1 rounded border border-stone-800 w-auto justify-center">
-                    <Zap size={12} className="text-amber-500" />
-                    <span className="text-amber-400 font-black text-[11px] tracking-widest">{(student.total_xp ?? 0).toLocaleString()}</span>
+                <div className="flex items-center gap-1 mt-1.5 bg-stone-900/80 px-2 py-0.5 rounded border border-stone-800 w-auto justify-center">
+                    <Zap size={10} className="text-amber-500" />
+                    <span className="text-amber-400 font-black text-[10px] tracking-widest">{(student.total_xp ?? 0).toLocaleString()}</span>
                 </div>
             </div>
         </motion.div>
@@ -462,29 +470,23 @@ const TeamRevealCard: React.FC<{ student: StudentProfile; index: number; total: 
 };
 
 const TeamRevealScreen: React.FC<{ students: StudentProfile[]; grade: number }> = ({ students, grade }) => {
-    // Determine dynamic grid sizing
     const count = students.length;
-    let cols = 3;
-    let rows = 1;
-
-    if (count <= 3) { cols = count; rows = 1; }
-    else if (count <= 4) { cols = 4; rows = 1; }
-    else if (count <= 6) { cols = 3; rows = 2; }
-    else if (count <= 8) { cols = 4; rows = 2; }
-    else if (count <= 10) { cols = 5; rows = 2; }
-    else if (count <= 12) { cols = 6; rows = 2; }
-    else if (count <= 15) { cols = 5; rows = 3; }
-    else { cols = Math.ceil(Math.sqrt(count * 1.5)); rows = Math.ceil(count / cols); }
-
     const gradeLabel = grade === 12 ? 'Group 3' : `Grade ${grade}`;
+
+    // Build rows: always max 5 per row, fill top row first
+    const maxPerRow = count <= 4 ? count : count <= 6 ? 3 : count <= 8 ? 4 : 5;
+    const topRow = students.slice(0, maxPerRow);
+    const bottomRow = students.slice(maxPerRow);
+    const topCols = topRow.length;
+    const bottomCols = bottomRow.length;
 
     return (
         <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="flex flex-col h-full w-full relative z-10 pb-16"
+            className="flex flex-col h-full w-full relative z-10"
         >
             {/* Header */}
-            <div className="text-center pt-6 pb-4 shrink-0">
+            <div className="text-center pt-5 pb-3 shrink-0">
                 <motion.p
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
@@ -501,7 +503,7 @@ const TeamRevealScreen: React.FC<{ students: StudentProfile[]; grade: number }> 
                         transition={{ delay: 0.3, type: "spring", bounce: 0.5 }}
                         className="font-sans font-black text-white italic tracking-tighter uppercase"
                         style={{
-                            fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+                            fontSize: 'clamp(1.8rem, 4vw, 3rem)',
                             textShadow: '0 0 40px rgba(245,158,11,0.5)',
                             animation: 'pulseGlow 3s ease-in-out infinite',
                         }}
@@ -512,13 +514,29 @@ const TeamRevealScreen: React.FC<{ students: StudentProfile[]; grade: number }> 
                 </div>
             </div>
 
-            {/* Dynamic Flex Layout Instead of Grid */}
-            <div className="flex-1 px-8 pb-8 flex items-center justify-center outline-none">
-                <div className="flex flex-wrap items-center justify-center content-center gap-6 lg:gap-8 w-full max-w-[1600px] mx-auto h-full overflow-y-auto pt-4">
-                    {students.map((s, i) => (
-                        <TeamRevealCard key={s.id} student={s} index={i} total={students.length} />
+            {/* Two-Row Layout — fixed vh heights, no scroll */}
+            <div className="flex-1 flex flex-col justify-center gap-5 px-8 pb-4 overflow-hidden">
+                {/* Top row — height based on viewport so cards are large on projector */}
+                <div
+                    className="flex gap-5 justify-center"
+                    style={{ height: 'clamp(180px, 40vh, 440px)' }}
+                >
+                    {topRow.map((s, i) => (
+                        <TeamRevealCard key={s.id} student={s} index={i} cols={topCols} />
                     ))}
                 </div>
+
+                {/* Bottom row */}
+                {bottomRow.length > 0 && (
+                    <div
+                        className="flex gap-5 justify-center"
+                        style={{ height: 'clamp(180px, 40vh, 440px)' }}
+                    >
+                        {bottomRow.map((s, i) => (
+                            <TeamRevealCard key={s.id} student={s} index={topRow.length + i} cols={bottomCols} />
+                        ))}
+                    </div>
+                )}
             </div>
         </motion.div>
     );
@@ -642,6 +660,260 @@ const SpotlightScreen: React.FC<{ student: StudentProfile }> = ({ student }) => 
     );
 };
 
+// ─── MODE 5: Podium ───────────────────────────────────────────────────────────
+const PODIUM_META = {
+    1: {
+        label: '1ST PLACE',
+        number: '01',
+        accentHex: '#f59e0b',
+        accentGlow: 'rgba(245,158,11,0.65)',
+        accentBorder: 'rgba(245,158,11,0.5)',
+        badgeBg: 'rgba(245,158,11,0.10)',
+        textAccent: '#fbbf24',
+        towerVh: 72,
+        towerPx: 265,
+        photoVh: 43,
+        order: 2,
+    },
+    2: {
+        label: '2ND PLACE',
+        number: '02',
+        accentHex: '#94a3b8',
+        accentGlow: 'rgba(148,163,184,0.55)',
+        accentBorder: 'rgba(148,163,184,0.4)',
+        badgeBg: 'rgba(148,163,184,0.08)',
+        textAccent: '#cbd5e1',
+        towerVh: 57,
+        towerPx: 230,
+        photoVh: 32,
+        order: 1,
+    },
+    3: {
+        label: '3RD PLACE',
+        number: '03',
+        accentHex: '#f97316',
+        accentGlow: 'rgba(249,115,22,0.55)',
+        accentBorder: 'rgba(249,115,22,0.4)',
+        badgeBg: 'rgba(249,115,22,0.08)',
+        textAccent: '#fb923c',
+        towerVh: 44,
+        towerPx: 205,
+        photoVh: 24,
+        order: 3,
+    },
+} as const;
+
+/**
+ * PodiumSlot — premium portrait tower
+ *
+ * ┌──────────────────────┐  ← glowing top edge
+ * │                      │
+ * │   [PHOTO — portrait] │  ← full-bleed photo (60% height)
+ * │                      │
+ * │░░░░░░░░░░░░░░░░░░░░░░│  ← deep vignette fade
+ * │   FIRSTNAME          │  ← dark info panel
+ * │   Lastname           │
+ * │   School             │
+ * │  ┌──── 1ST PLACE ───┐│  ← typographic badge
+ * └──┴──────────────────┴┘
+ */
+const PodiumSlot: React.FC<{ position: 1 | 2 | 3; students: PodiumEntry['student'][] }> = ({ position, students }) => {
+    const meta = PODIUM_META[position];
+    const isFirst = position === 1;
+    const isTie = students.length > 1;
+    const delay = position === 3 ? 0.0 : position === 2 ? 0.3 : 0.65;
+
+    return (
+        <motion.div
+            initial={{ y: '100vh' }}
+            animate={{ y: 0 }}
+            transition={{ delay, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+                order: meta.order,
+                minHeight: `${meta.towerVh}vh`,
+                width: `${meta.towerPx}px`,
+                marginBottom: '-200px',
+                paddingBottom: '200px',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                borderRadius: '18px 18px 0 0',
+                background: '#0c0a09',
+                // Glowing top border
+                boxShadow: `0 -2px 0 0 ${meta.accentHex}, 0 0 40px ${meta.accentGlow}, 0 0 80px ${meta.accentGlow.replace('0.65', '0.2').replace('0.55', '0.15')}`,
+            }}
+        >
+            {/* ── PHOTO SECTION ── */}
+            <div style={{
+                height: `${meta.photoVh}vh`,
+                position: 'relative',
+                overflow: 'hidden',
+                flexShrink: 0,
+                background: '#1a1714',
+            }}>
+                {isTie ? (
+                    <div style={{ display: 'flex', height: '100%' }}>
+                        {students.map((s, i) => (
+                            <div key={s.id} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                                {i > 0 && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '1px', background: 'rgba(255,255,255,0.06)', zIndex: 2 }} />}
+                                {s.photo
+                                    ? <img src={s.photo} alt={s.firstName} className="w-full h-full object-cover object-top" />
+                                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem', fontWeight: 900, color: meta.accentHex, opacity: 0.25 }}>{s.firstName?.[0]}</div>
+                                }
+                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '55%', background: 'linear-gradient(to top, #0c0a09 0%, rgba(12,10,9,0.5) 55%, transparent 100%)' }} />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <>
+                        {students[0]?.photo
+                            ? <img src={students[0].photo} alt={students[0].firstName} className="absolute inset-0 w-full h-full object-cover object-top" />
+                            : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9rem', fontWeight: 900, color: meta.accentHex, opacity: 0.15 }}>{students[0]?.firstName?.[0]}</div>
+                        }
+                        {/* Deep vignette — blends photo into info panel */}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '70%', background: 'linear-gradient(to top, #0c0a09 0%, rgba(12,10,9,0.75) 35%, transparent 100%)' }} />
+                    </>
+                )}
+
+                {/* Accent side lines */}
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '2px', height: '50%', background: `linear-gradient(to bottom, ${meta.accentHex}, transparent)`, opacity: 0.45 }} />
+                <div style={{ position: 'absolute', top: 0, right: 0, width: '2px', height: '50%', background: `linear-gradient(to bottom, ${meta.accentHex}, transparent)`, opacity: 0.45 }} />
+
+
+            </div>
+
+            {/* ── INFO PANEL ── */}
+            <div style={{
+                flex: 1,
+                background: '#0c0a09',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '12px 18px 18px',
+                gap: 6,
+                position: 'relative',
+                zIndex: 1,
+            }}>
+                {/* Subtle honeycomb texture */}
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66zM28 98L0 82V50L28 34l28 16v32L28 98z' fill='none' stroke='%23f59e0b' stroke-width='0.5'/%3E%3C/svg%3E")`,
+                    backgroundSize: '40px 70px', opacity: 0.03, pointerEvents: 'none',
+                }} />
+
+                {/* Names */}
+                {students.map((s, i) => (
+                    <motion.div
+                        key={s.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: delay + 0.5 + i * 0.1, duration: 0.45 }}
+                        style={{
+                            textAlign: 'center', width: '100%', position: 'relative', zIndex: 1,
+                            ...(i > 0 ? { paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)' } : {}),
+                        }}
+                    >
+                        <p style={{
+                            fontSize: isTie ? '1rem' : isFirst ? '1.7rem' : '1.3rem',
+                            fontWeight: 900, textTransform: 'uppercase',
+                            letterSpacing: '0.03em', color: 'white', lineHeight: 1,
+                            textShadow: `0 0 30px ${meta.accentGlow}`,
+                        }}>{s.firstName}</p>
+                        <p style={{
+                            fontSize: '0.63rem', fontWeight: 700, textTransform: 'uppercase',
+                            letterSpacing: '0.2em', color: 'rgba(161,155,151,0.6)',
+                            marginTop: 5, lineHeight: 1,
+                        }}>{s.lastName}</p>
+                        {!isTie && (
+                            <p style={{
+                                fontSize: '0.55rem', color: 'rgba(120,113,108,0.45)',
+                                marginTop: 4, letterSpacing: '0.05em',
+                            }}>{s.school}</p>
+                        )}
+                    </motion.div>
+                ))}
+
+                {/* Place badge */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: delay + 0.8, type: 'spring', bounce: 0.3 }}
+                    style={{
+                        marginTop: 8, padding: '5px 18px',
+                        border: `1px solid ${meta.accentBorder}`,
+                        borderRadius: '3px', background: meta.badgeBg,
+                        position: 'relative', zIndex: 1,
+                    }}
+                >
+                    <span style={{
+                        fontSize: '0.6rem', fontWeight: 900,
+                        letterSpacing: '0.35em', color: meta.textAccent, textTransform: 'uppercase',
+                    }}>{meta.label}</span>
+                </motion.div>
+            </div>
+        </motion.div>
+    );
+};
+
+const PodiumScreen: React.FC<{ entries: PodiumEntry[] }> = ({ entries }) => {
+    const byPosition = (pos: 1 | 2 | 3) => entries.filter(e => e.position === pos).map(e => e.student);
+    const first = byPosition(1);
+    const second = byPosition(2);
+    const third = byPosition(3);
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="flex flex-col w-full h-full overflow-hidden"
+        >
+            {/* ── Compact horizontal header ── */}
+            <div className="shrink-0 flex items-center justify-center gap-5 pt-5 pb-3 px-10">
+                <motion.span
+                    initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.1, duration: 0.6 }}
+                    style={{ height: '1px', flex: 1, background: 'linear-gradient(to right, transparent, rgba(245,158,11,0.35))' }}
+                />
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }}
+                    className="flex items-center gap-4 shrink-0"
+                >
+                    <motion.img
+                        src="/bee.png" alt="Bee"
+                        animate={{ y: [0, -5, 0] }}
+                        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ width: '40px', height: '40px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(245,158,11,0.6))', opacity: 0.85 }}
+                    />
+                    <div className="text-center">
+                        <p className="text-amber-500/50 text-[10px] font-black uppercase tracking-[0.45em] leading-none mb-1">
+                            Interschool Spelling Bee · Results
+                        </p>
+                        <h2 className="font-serif font-black text-white italic tracking-tight leading-none uppercase"
+                            style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.8rem)', textShadow: '0 0 40px rgba(245,158,11,0.5)', animation: 'pulseGlow 3s ease-in-out infinite' }}>
+                            Podium
+                        </h2>
+                    </div>
+                </motion.div>
+                <motion.span
+                    initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.1, duration: 0.6 }}
+                    style={{ height: '1px', flex: 1, background: 'linear-gradient(to left, transparent, rgba(245,158,11,0.35))' }}
+                />
+            </div>
+
+            {/* ── Tower layout — bottom-aligned ── */}
+            <div style={{
+                flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+                gap: '1.5rem', padding: '0 3rem',
+                overflow: 'hidden', minHeight: 0,
+            }}>
+                {second.length > 0 && <PodiumSlot position={2} students={second} />}
+                {first.length > 0 && <PodiumSlot position={1} students={first} />}
+                {third.length > 0 && <PodiumSlot position={3} students={third} />}
+            </div>
+        </motion.div>
+    );
+};
+
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const LiveEventDisplay: React.FC<LiveEventDisplayProps> = ({ initialStudents }) => {
     const [mode, setMode] = useState<DisplayMode>('standby');
@@ -651,6 +923,12 @@ export const LiveEventDisplay: React.FC<LiveEventDisplayProps> = ({ initialStude
     const [teamStudents, setTeamStudents] = useState<StudentProfile[]>([]);
     const [teamGrade, setTeamGrade] = useState<number>(1);
     const [spotlightStudent, setSpotlightStudent] = useState<StudentProfile | null>(null);
+    const [podiumEntries, setPodiumEntries] = useState<PodiumEntry[]>([]);
+    // Slideshow state
+    const [slideshowStudents, setSlideshowStudents] = useState<StudentProfile[]>([]);
+    const [slideshowIndex, setSlideshowIndex] = useState(0);
+    const [slideshowKey, setSlideshowKey] = useState(0); // incremented every time slideshow starts
+    const slideshowRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [sponsors, setSponsors] = useState<Sponsor[]>([]);
     const [loading, setLoading] = useState(false);
     const [showTop, setShowTop] = useState(10);
@@ -700,6 +978,17 @@ export const LiveEventDisplay: React.FC<LiveEventDisplayProps> = ({ initialStude
         return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current); };
     }, [mode, loadLeaderboard]);
 
+    // Slideshow interval — advances index in loop; re-runs whenever slideshowKey changes
+    useEffect(() => {
+        if (slideshowRef.current) { clearInterval(slideshowRef.current); slideshowRef.current = null; }
+        if (mode === 'slideshow' && slideshowStudents.length > 0) {
+            slideshowRef.current = setInterval(() => {
+                setSlideshowIndex(i => (i + 1) % slideshowStudents.length);
+            }, 4000);
+        }
+        return () => { if (slideshowRef.current) { clearInterval(slideshowRef.current); slideshowRef.current = null; } };
+    }, [mode, slideshowStudents, slideshowKey]);
+
     // Listen for commands from admin tab via BroadcastChannel
     useLiveChannel((cmd: LiveCommand) => {
         switch (cmd.type) {
@@ -718,13 +1007,23 @@ export const LiveEventDisplay: React.FC<LiveEventDisplayProps> = ({ initialStude
                 setSpotlightStudent(cmd.student);
                 setMode('spotlight');
                 break;
+            case 'slideshow':
+                setSlideshowStudents(cmd.students);
+                setSlideshowIndex(0);
+                setSlideshowKey(k => k + 1);
+                setMode('slideshow');
+                break;
+            case 'podium':
+                setPodiumEntries(cmd.entries);
+                setMode('podium');
+                break;
         }
     });
 
     const displayedLeaderboard = leaderboardStudents.slice(0, showTop);
 
     return (
-        <div className="relative min-h-screen w-full overflow-hidden bg-stone-950 flex flex-col font-sans">
+        <div className="relative h-screen w-full overflow-hidden bg-stone-950 flex flex-col font-sans">
             <HoneycombBg />
             <ScanlineOverlay />
             <div className="absolute pointer-events-none" style={{
@@ -756,17 +1055,21 @@ export const LiveEventDisplay: React.FC<LiveEventDisplayProps> = ({ initialStude
             </div>
 
             {/* ── Content ── */}
-            <div className="relative z-10 flex-1 flex">
+            <div className="relative z-10 flex-1 flex" style={{ minHeight: 0 }}>
                 <AnimatePresence mode="wait">
                     {mode === 'standby' && <StandbyScreen key="standby" />}
                     {mode === 'leaderboard' && <LiveLeaderboard key="leaderboard" students={displayedLeaderboard} onRefresh={loadLeaderboard} loading={loading} lastRefresh={lastRefresh} />}
                     {mode === 'team-reveal' && <TeamRevealScreen key="team" students={teamStudents} grade={teamGrade} />}
                     {mode === 'spotlight' && spotlightStudent && <SpotlightScreen key={`spotlight-${spotlightStudent.id}`} student={spotlightStudent} />}
+                    {mode === 'slideshow' && slideshowStudents.length > 0 && (
+                        <SpotlightScreen key={`slideshow-${slideshowKey}-${slideshowIndex}`} student={slideshowStudents[slideshowIndex]} />
+                    )}
+                    {mode === 'podium' && <PodiumScreen key="podium" entries={podiumEntries} />}
                 </AnimatePresence>
             </div>
 
-            {/* Global Sponsors Ticker */}
-            <LiveSponsors sponsors={sponsors} />
+            {/* Global Sponsors Ticker — hidden in team-reveal / podium to maximize space */}
+            {mode !== 'team-reveal' && mode !== 'podium' && <LiveSponsors sponsors={sponsors} />}
         </div>
     );
 };

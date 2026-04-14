@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StudentProfile, GradeLevel } from '../types';
 import { fetchStudents, fetchSchools } from '../services/supabaseData';
-import { sendLiveCommand } from '../lib/liveChannel';
-import { Monitor, Users, Zap, LayoutGrid, Radio, UserCheck, RefreshCw, Tv, Star, ChevronRight } from 'lucide-react';
+import { sendLiveCommand, PodiumEntry } from '../lib/liveChannel';
+import { Monitor, Users, Zap, LayoutGrid, Radio, UserCheck, RefreshCw, Tv, ChevronRight, Play, Square, Trophy, X } from 'lucide-react';
 import { LeagueBadge, LEAGUE_META } from './LiveEventDisplay';
 
 // ─── Grade config ──────────────────────────────────────────────────────────────
@@ -15,9 +15,12 @@ const GRADE_BUTTONS: { value: number; label: string }[] = [
 const StudentCard: React.FC<{
     student: StudentProfile;
     isSpotlit: boolean;
+    isSlideshowing: boolean;
+    podiumPosition: 1 | 2 | 3 | null;
     onSpotlight: () => void;
-}> = ({ student, isSpotlit, onSpotlight }) => {
-    // Determine league text (fallback to Paper if xp missing or not a known league)
+    onAddPodium: (pos: 1 | 2 | 3) => void;
+    onRemovePodium: () => void;
+}> = ({ student, isSpotlit, isSlideshowing, podiumPosition, onSpotlight, onAddPodium, onRemovePodium }) => {
     const xp = student.total_xp ?? 0;
     let leagueText: keyof typeof LEAGUE_META = 'Paper';
     if (xp >= 100000) leagueText = 'Diamond';
@@ -27,50 +30,73 @@ const StudentCard: React.FC<{
     else if (xp >= 1000) leagueText = 'Iron';
 
     const meta = LEAGUE_META[leagueText];
+    const inPodium = podiumPosition !== null;
+
+    const podiumColors: Record<1 | 2 | 3, string> = {
+        1: 'bg-amber-500/20 border-amber-400 text-amber-300',
+        2: 'bg-slate-500/20 border-slate-300 text-slate-300',
+        3: 'bg-orange-500/20 border-orange-400 text-orange-300',
+    };
+    const podiumLabels: Record<1 | 2 | 3, string> = { 1: '1st', 2: '2nd', 3: '3rd' };
+
     return (
         <div
             className={`
-                group relative flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer
-                ${isSpotlit
+                group relative flex flex-col gap-2 p-3 rounded-xl border transition-all
+                ${isSpotlit || isSlideshowing
                     ? 'bg-amber-500/20 border-amber-500 shadow-[0_0_16px_rgba(245,158,11,0.4)]'
-                    : 'bg-stone-800/60 border-stone-700 hover:border-amber-500/50 hover:bg-stone-800'}
+                    : inPodium
+                        ? `${podiumColors[podiumPosition!].split(' ').slice(0, 2).join(' ')} shadow-md`
+                        : 'bg-stone-800/60 border-stone-700 hover:border-amber-500/50 hover:bg-stone-800'
+                }
             `}
-            onClick={onSpotlight}
-            title={`Spotlight ${student.firstName} ${student.lastName}`}
         >
-            {/* Photo */}
-            <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-stone-600 bg-stone-700">
-                {student.photo ? (
-                    <img src={student.photo} alt={student.firstName} className="w-full h-full object-cover" />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-amber-400 font-black text-lg">
-                        {student.firstName?.[0]}
+            {/* Top row: photo + info + spotlight */}
+            <div className="flex items-center gap-3 cursor-pointer" onClick={onSpotlight}
+                title={`Spotlight ${student.firstName}`}>
+                <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-stone-600 bg-stone-700">
+                    {student.photo
+                        ? <img src={student.photo} alt={student.firstName} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center text-amber-400 font-black text-lg">{student.firstName?.[0]}</div>
+                    }
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-white font-bold text-sm truncate">{student.firstName} {student.lastName}</p>
+                    <p className="text-stone-400 text-xs truncate">{student.school}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                        <div className="scale-75 origin-left"><LeagueBadge league={leagueText} hideText /></div>
+                        <p className={`text-xs font-bold ${meta.iconClass}`}>{(student.total_xp ?? 0).toLocaleString()} XP</p>
                     </div>
+                </div>
+                {(isSpotlit || isSlideshowing)
+                    ? <Tv size={14} className="text-amber-400 shrink-0 animate-pulse" />
+                    : <ChevronRight size={14} className="text-stone-600 shrink-0 group-hover:text-amber-500 transition-colors" />
+                }
+            </div>
+
+            {/* Podium buttons */}
+            <div className="flex gap-1.5">
+                {inPodium ? (
+                    <button
+                        onClick={onRemovePodium}
+                        className={`flex-1 flex items-center justify-center gap-1 py-1 rounded-lg border text-xs font-bold transition-all ${podiumColors[podiumPosition!]}`}
+                    >
+                        <X size={11} /> {podiumLabels[podiumPosition!]} Place
+                    </button>
+                ) : (
+                    <>
+                        {([1, 2, 3] as const).map(pos => (
+                            <button
+                                key={pos}
+                                onClick={() => onAddPodium(pos)}
+                                className="flex-1 py-1 rounded-lg border border-stone-700 text-stone-500 hover:border-stone-500 hover:text-stone-300 text-[10px] font-bold transition-all"
+                            >
+                                +{podiumLabels[pos]}
+                            </button>
+                        ))}
+                    </>
                 )}
             </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-                <p className="text-white font-bold text-sm truncate">
-                    {student.firstName} {student.lastName}
-                </p>
-                <p className="text-stone-400 text-xs truncate">{student.school}</p>
-                <div className="flex items-center gap-2 mt-1">
-                    <div className="scale-75 origin-left">
-                        <LeagueBadge league={leagueText} hideText />
-                    </div>
-                    <p className={`text-xs font-bold ${meta.iconClass}`}>
-                        {(student.total_xp ?? 0).toLocaleString()} XP
-                    </p>
-                </div>
-            </div>
-
-            {/* Spotlight indicator */}
-            {isSpotlit ? (
-                <Tv size={16} className="text-amber-400 shrink-0 animate-pulse" />
-            ) : (
-                <ChevronRight size={16} className="text-stone-600 shrink-0 group-hover:text-amber-500 transition-colors" />
-            )}
         </div>
     );
 };
@@ -99,6 +125,45 @@ const ModeButton: React.FC<{
     </button>
 );
 
+// ─── Podium Slot Preview ──────────────────────────────────────────────────────
+const PodiumSlotPreview: React.FC<{
+    position: 1 | 2 | 3;
+    students: StudentProfile[];
+    onRemove: (studentId: string) => void;
+}> = ({ position, students, onRemove }) => {
+    const labels: Record<1 | 2 | 3, string> = { 1: '🥇 1st Place', 2: '🥈 2nd Place', 3: '🥉 3rd Place' };
+    const colors: Record<1 | 2 | 3, string> = {
+        1: 'border-amber-500/50 bg-amber-500/10',
+        2: 'border-slate-400/50 bg-slate-500/10',
+        3: 'border-orange-500/50 bg-orange-500/10',
+    };
+    return (
+        <div className={`rounded-xl border p-2 ${colors[position]}`}>
+            <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1.5">{labels[position]}</p>
+            {students.length === 0 ? (
+                <p className="text-stone-600 text-xs italic px-1">Empty</p>
+            ) : (
+                <div className="flex flex-col gap-1">
+                    {students.map(s => (
+                        <div key={s.id} className="flex items-center gap-2 bg-stone-900/60 rounded-lg px-2 py-1">
+                            <div className="w-6 h-6 rounded overflow-hidden bg-stone-700 shrink-0">
+                                {s.photo
+                                    ? <img src={s.photo} alt="" className="w-full h-full object-cover" />
+                                    : <div className="w-full h-full flex items-center justify-center text-amber-400 font-black text-xs">{s.firstName?.[0]}</div>
+                                }
+                            </div>
+                            <span className="text-white text-xs font-bold truncate flex-1">{s.firstName} {s.lastName}</span>
+                            <button onClick={() => onRemove(s.id)} className="text-stone-500 hover:text-red-400 transition-colors">
+                                <X size={11} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     const [allStudents, setAllStudents] = useState<StudentProfile[]>([]);
@@ -107,8 +172,14 @@ export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack })
     const [loading, setLoading] = useState(true);
     const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
     const [spotlitStudent, setSpotlitStudent] = useState<StudentProfile | null>(null);
-    const [activeMode, setActiveMode] = useState<'standby' | 'leaderboard' | 'team-reveal' | 'spotlight'>('standby');
+    const [activeMode, setActiveMode] = useState<'standby' | 'leaderboard' | 'team-reveal' | 'spotlight' | 'slideshow' | 'podium'>('standby');
     const [projectorOpen, setProjectorOpen] = useState(false);
+
+    // Podium state: map studentId -> position
+    const [podiumEntries, setPodiumEntries] = useState<PodiumEntry[]>([]);
+
+    // Active panel in right column
+    const [rightPanel, setRightPanel] = useState<'roster' | 'podium'>('roster');
 
     // Load students and schools on mount
     useEffect(() => {
@@ -133,10 +204,8 @@ export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack })
         const checkProjector = () => {
             try {
                 const ch = new BroadcastChannel('spelling-bee-live');
-                // If we can open a channel, assume it might be open
-                // A real pong check would need the display to respond
                 ch.close();
-                setProjectorOpen(true); // optimistic
+                setProjectorOpen(true);
             } catch { setProjectorOpen(false); }
         };
         checkProjector();
@@ -176,11 +245,45 @@ export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack })
         setSpotlitStudent(student);
     }, []);
 
+    const sendSlideshow = useCallback(() => {
+        if (selectedGrade === null || gradeStudents.length === 0) return;
+        sendLiveCommand({ type: 'slideshow', students: gradeStudents, grade: selectedGrade, intervalMs: 4000 });
+        setActiveMode('slideshow');
+        setSpotlitStudent(null);
+    }, [selectedGrade, gradeStudents]);
+
+    const sendPodium = useCallback(() => {
+        if (podiumEntries.length === 0) return;
+        sendLiveCommand({ type: 'podium', entries: podiumEntries });
+        setActiveMode('podium');
+        setSpotlitStudent(null);
+    }, [podiumEntries]);
+
     const launchProjector = () => {
         const url = `${window.location.origin}${window.location.pathname}?live=1`;
         window.open(url, '_blank', 'noopener,noreferrer');
         setProjectorOpen(true);
     };
+
+    // Podium helpers
+    const addToPodium = (student: StudentProfile, position: 1 | 2 | 3) => {
+        setPodiumEntries(prev => {
+            // Remove if already in podium at any position
+            const filtered = prev.filter(e => e.student.id !== student.id);
+            return [...filtered, { position, student }];
+        });
+    };
+
+    const removeFromPodium = (studentId: string) => {
+        setPodiumEntries(prev => prev.filter(e => e.student.id !== studentId));
+    };
+
+    const getPodiumPosition = (studentId: string): 1 | 2 | 3 | null => {
+        return podiumEntries.find(e => e.student.id === studentId)?.position ?? null;
+    };
+
+    const podiumByPosition = (pos: 1 | 2 | 3) =>
+        podiumEntries.filter(e => e.position === pos).map(e => e.student);
 
     return (
         <div className="min-h-screen bg-stone-950 text-white font-sans flex flex-col">
@@ -197,7 +300,6 @@ export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack })
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {/* Back to dashboard */}
                     {onBack && (
                         <button
                             onClick={onBack}
@@ -207,7 +309,6 @@ export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack })
                         </button>
                     )}
 
-                    {/* Projector status */}
                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border ${projectorOpen
                         ? 'bg-green-900/40 border-green-700 text-green-400'
                         : 'bg-stone-800 border-stone-700 text-stone-500'
@@ -218,7 +319,6 @@ export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack })
                         }
                     </div>
 
-                    {/* Launch button */}
                     <button
                         onClick={launchProjector}
                         className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-sm transition-all shadow-lg"
@@ -232,6 +332,8 @@ export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack })
             <div className="flex-1 flex overflow-hidden">
                 {/* ── Left panel: Mode control ── */}
                 <div className="w-72 shrink-0 bg-stone-900/60 border-r border-stone-800 flex flex-col p-5 gap-5 overflow-y-auto">
+
+                    {/* Display modes */}
                     <div>
                         <p className="text-stone-500 text-[10px] font-black uppercase tracking-widest mb-3">Display Mode</p>
                         <div className="grid grid-cols-2 gap-2">
@@ -253,6 +355,7 @@ export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack })
                             />
                         </div>
 
+                        {/* Team Reveal */}
                         <button
                             onClick={sendTeamReveal}
                             disabled={selectedGrade === null || gradeStudents.length === 0}
@@ -268,7 +371,7 @@ export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack })
                                 <LayoutGrid size={20} />
                                 <span>
                                     <span className="block text-sm font-black">Team Reveal</span>
-                                    <span className="text-[10px] font-normal opacity-70">LoL loading screen</span>
+                                    <span className="text-[10px] font-normal opacity-70">All on screen</span>
                                 </span>
                             </span>
                             {selectedGrade !== null && gradeStudents.length > 0 && (
@@ -277,10 +380,68 @@ export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack })
                                 </span>
                             )}
                         </button>
+
+                        {/* Auto Slideshow */}
+                        <button
+                            onClick={activeMode === 'slideshow' ? sendStandby : sendSlideshow}
+                            disabled={selectedGrade === null || gradeStudents.length === 0}
+                            className={`
+                                w-full mt-2 flex items-center justify-between gap-3 px-4 py-4 rounded-2xl border-2 font-bold transition-all
+                                ${activeMode === 'slideshow'
+                                    ? 'border-violet-500 bg-violet-500/10 text-violet-300 shadow-lg'
+                                    : 'border-stone-700 bg-stone-800/50 text-stone-400 hover:border-violet-500/50 hover:text-violet-400'}
+                                disabled:opacity-40 disabled:cursor-not-allowed
+                            `}
+                        >
+                            <span className="flex items-center gap-2">
+                                {activeMode === 'slideshow' ? <Square size={20} /> : <Play size={20} />}
+                                <span>
+                                    <span className="block text-sm font-black">
+                                        {activeMode === 'slideshow' ? 'Stop Slideshow' : 'Auto Slideshow'}
+                                    </span>
+                                    <span className="text-[10px] font-normal opacity-70">
+                                        {activeMode === 'slideshow' ? 'Running — click to stop' : 'Cycles automatically · 4s each'}
+                                    </span>
+                                </span>
+                            </span>
+                            {activeMode === 'slideshow' && (
+                                <span className="relative flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-400" />
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Podium */}
+                        <button
+                            onClick={() => {
+                                setRightPanel('podium');
+                                if (podiumEntries.length > 0) sendPodium();
+                            }}
+                            className={`
+                                w-full mt-2 flex items-center justify-between gap-3 px-4 py-4 rounded-2xl border-2 font-bold transition-all
+                                ${activeMode === 'podium'
+                                    ? 'border-amber-400 bg-amber-500/10 text-amber-300 shadow-lg'
+                                    : 'border-stone-700 bg-stone-800/50 text-stone-400 hover:border-amber-500/50 hover:text-amber-400'}
+                            `}
+                        >
+                            <span className="flex items-center gap-2">
+                                <Trophy size={20} />
+                                <span>
+                                    <span className="block text-sm font-black">Show Podium</span>
+                                    <span className="text-[10px] font-normal opacity-70">Build & display results</span>
+                                </span>
+                            </span>
+                            {podiumEntries.length > 0 && (
+                                <span className="text-xs bg-amber-500 text-stone-900 px-2 py-1 rounded-full font-black">
+                                    {podiumEntries.length}
+                                </span>
+                            )}
+                        </button>
                     </div>
 
-                    {/* Current spotlight */}
-                    {activeMode === 'spotlight' && spotlitStudent && (
+                    {/* Current spotlight indicator */}
+                    {(activeMode === 'spotlight' || activeMode === 'slideshow') && spotlitStudent && (
                         <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl p-4">
                             <p className="text-amber-400/70 text-[10px] font-black uppercase tracking-widest mb-2">On screen now</p>
                             <div className="flex items-center gap-3">
@@ -298,106 +459,249 @@ export const LiveEventControls: React.FC<{ onBack?: () => void }> = ({ onBack })
                             </div>
                         </div>
                     )}
+
+                    {/* Slideshow live indicator */}
+                    {activeMode === 'slideshow' && (
+                        <div className="bg-violet-500/10 border border-violet-500/40 rounded-xl p-3">
+                            <div className="flex items-center gap-2">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-400" />
+                                </span>
+                                <p className="text-violet-300 text-xs font-bold">Slideshow running</p>
+                            </div>
+                            <p className="text-stone-500 text-[10px] mt-1">Cycling {gradeStudents.length} students · 4s each</p>
+                            <button onClick={sendStandby} className="mt-2 w-full flex items-center justify-center gap-1 py-1.5 rounded-lg bg-violet-600/30 border border-violet-500/40 text-violet-300 text-xs font-bold hover:bg-violet-600/50 transition-all">
+                                <Square size={11} /> Stop
+                            </button>
+                        </div>
+                    )}
                 </div>
 
-                {/* ── Right panel: Grade + Student roster ── */}
+                {/* ── Right panel ── */}
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* Grade selector */}
-                    <div className="bg-stone-900/40 border-b border-stone-800 px-6 py-4 shrink-0">
-                        <div className="flex items-center gap-3 mb-3">
-                            <Users size={16} className="text-stone-400" />
-                            <p className="text-stone-400 text-xs font-black uppercase tracking-widest">Select competing grade</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {GRADE_BUTTONS.map(({ value, label }) => {
-                                const count = allStudents.filter(s =>
-                                    s.grade === value && (!!s.schoolId || schoolNames.has(s.school ?? ''))
-                                ).length;
-                                return (
-                                    <button
-                                        key={value}
-                                        onClick={() => setSelectedGrade(value)}
-                                        disabled={count === 0}
-                                        className={`
-                                            relative px-4 py-2 rounded-xl text-sm font-bold transition-all border
-                                            ${selectedGrade === value
-                                                ? 'bg-amber-500 text-stone-900 border-amber-500 shadow-lg shadow-amber-900/30 scale-105'
-                                                : count === 0
-                                                    ? 'bg-stone-900 border-stone-800 text-stone-700 cursor-not-allowed'
-                                                    : 'bg-stone-800 border-stone-700 text-stone-300 hover:border-amber-500/50 hover:text-amber-400'}
-                                        `}
-                                    >
-                                        {label}
-                                        {count > 0 && (
-                                            <span className={`ml-1.5 text-[10px] font-black ${selectedGrade === value ? 'text-stone-700' : 'text-stone-500'}`}>
-                                                {count}
-                                            </span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
+
+                    {/* Panel tabs */}
+                    <div className="bg-stone-900/40 border-b border-stone-800 px-6 py-0 shrink-0 flex items-center gap-0">
+                        <button
+                            onClick={() => setRightPanel('roster')}
+                            className={`px-5 py-4 text-sm font-bold border-b-2 transition-all ${rightPanel === 'roster' ? 'border-amber-500 text-amber-400' : 'border-transparent text-stone-500 hover:text-stone-300'}`}
+                        >
+                            <Users size={14} className="inline mr-2" />
+                            Roster
+                        </button>
+                        <button
+                            onClick={() => setRightPanel('podium')}
+                            className={`px-5 py-4 text-sm font-bold border-b-2 transition-all ${rightPanel === 'podium' ? 'border-amber-500 text-amber-400' : 'border-transparent text-stone-500 hover:text-stone-300'}`}
+                        >
+                            <Trophy size={14} className="inline mr-2" />
+                            Podium Builder
+                            {podiumEntries.length > 0 && (
+                                <span className="ml-2 text-[10px] bg-amber-500 text-stone-900 px-1.5 py-0.5 rounded-full font-black">{podiumEntries.length}</span>
+                            )}
+                        </button>
                     </div>
 
-                    {/* Student roster */}
-                    <div className="flex-1 overflow-y-auto px-6 py-5">
-                        {loading ? (
-                            <div className="flex items-center justify-center h-full gap-3 text-stone-500">
-                                <RefreshCw size={20} className="animate-spin" />
-                                <span className="text-sm">Loading students…</span>
-                            </div>
-                        ) : selectedGrade === null ? (
-                            <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-                                <div className="w-16 h-16 bg-stone-800 rounded-2xl flex items-center justify-center">
-                                    <Users size={28} className="text-stone-600" />
+                    {/* ── Roster Panel ── */}
+                    {rightPanel === 'roster' && (
+                        <>
+                            {/* Grade selector */}
+                            <div className="bg-stone-900/40 border-b border-stone-800 px-6 py-4 shrink-0">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <Users size={16} className="text-stone-400" />
+                                    <p className="text-stone-400 text-xs font-black uppercase tracking-widest">Select competing grade</p>
                                 </div>
-                                <div>
-                                    <p className="text-stone-400 font-bold">Select a grade above</p>
-                                    <p className="text-stone-600 text-sm mt-1">to see the IV Edition competitors</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {GRADE_BUTTONS.map(({ value, label }) => {
+                                        const count = allStudents.filter(s =>
+                                            s.grade === value && (!!s.schoolId || schoolNames.has(s.school ?? ''))
+                                        ).length;
+                                        return (
+                                            <button
+                                                key={value}
+                                                onClick={() => setSelectedGrade(value)}
+                                                disabled={count === 0}
+                                                className={`
+                                                    relative px-4 py-2 rounded-xl text-sm font-bold transition-all border
+                                                    ${selectedGrade === value
+                                                        ? 'bg-amber-500 text-stone-900 border-amber-500 shadow-lg shadow-amber-900/30 scale-105'
+                                                        : count === 0
+                                                            ? 'bg-stone-900 border-stone-800 text-stone-700 cursor-not-allowed'
+                                                            : 'bg-stone-800 border-stone-700 text-stone-300 hover:border-amber-500/50 hover:text-amber-400'}
+                                                `}
+                                            >
+                                                {label}
+                                                {count > 0 && (
+                                                    <span className={`ml-1.5 text-[10px] font-black ${selectedGrade === value ? 'text-stone-700' : 'text-stone-500'}`}>
+                                                        {count}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
-                        ) : gradeStudents.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full gap-3 text-stone-600">
-                                <UserCheck size={40} className="opacity-30" />
-                                <p className="text-sm">No interschool students registered for this grade</p>
+
+                            {/* Student roster */}
+                            <div className="flex-1 overflow-y-auto px-6 py-5">
+                                {loading ? (
+                                    <div className="flex items-center justify-center h-full gap-3 text-stone-500">
+                                        <RefreshCw size={20} className="animate-spin" />
+                                        <span className="text-sm">Loading students…</span>
+                                    </div>
+                                ) : selectedGrade === null ? (
+                                    <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+                                        <div className="w-16 h-16 bg-stone-800 rounded-2xl flex items-center justify-center">
+                                            <Users size={28} className="text-stone-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-stone-400 font-bold">Select a grade above</p>
+                                            <p className="text-stone-600 text-sm mt-1">to see the IV Edition competitors</p>
+                                        </div>
+                                    </div>
+                                ) : gradeStudents.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full gap-3 text-stone-600">
+                                        <UserCheck size={40} className="opacity-30" />
+                                        <p className="text-sm">No interschool students registered for this grade</p>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-white font-black text-lg">
+                                                    {selectedGrade === 12 ? 'Group 3' : `Grade ${selectedGrade}`}
+                                                </span>
+                                                <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
+                                                    {gradeStudents.length} competitors
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={activeMode === 'slideshow' ? sendStandby : sendSlideshow}
+                                                    className={`flex items-center gap-2 px-3 py-2 font-bold rounded-xl text-xs transition-all shadow-md ${activeMode === 'slideshow' ? 'bg-violet-600 hover:bg-violet-500 text-white' : 'bg-stone-700 hover:bg-stone-600 text-stone-200'}`}
+                                                >
+                                                    {activeMode === 'slideshow' ? <><Square size={12} /> Stop</> : <><Play size={12} /> Slideshow</>}
+                                                </button>
+                                                <button
+                                                    onClick={sendTeamReveal}
+                                                    className="flex items-center gap-2 px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-all shadow-md"
+                                                >
+                                                    <LayoutGrid size={12} /> Show All
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                            {gradeStudents.map(student => (
+                                                <StudentCard
+                                                    key={student.id}
+                                                    student={student}
+                                                    isSpotlit={spotlitStudent?.id === student.id && activeMode === 'spotlight'}
+                                                    isSlideshowing={activeMode === 'slideshow'}
+                                                    podiumPosition={getPodiumPosition(student.id)}
+                                                    onSpotlight={() => sendSpotlight(student)}
+                                                    onAddPodium={(pos) => addToPodium(student, pos)}
+                                                    onRemovePodium={() => removeFromPodium(student.id)}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        <p className="text-stone-700 text-xs text-center mt-6">
+                                            Tap a student card to spotlight · Use +1st/+2nd/+3rd to build podium
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                        ) : (
-                            <div>
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-white font-black text-lg">
-                                            {selectedGrade === 12 ? 'Group 3' : `Grade ${selectedGrade}`}
-                                        </span>
-                                        <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
-                                            {gradeStudents.length} competitors
-                                        </span>
+                        </>
+                    )}
+
+                    {/* ── Podium Builder Panel ── */}
+                    {rightPanel === 'podium' && (
+                        <div className="flex-1 overflow-y-auto px-6 py-5">
+                            <div className="max-w-2xl mx-auto">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div>
+                                        <h2 className="text-white font-black text-xl">Podium Builder</h2>
+                                        <p className="text-stone-500 text-sm mt-0.5">Assign students to positions. Ties are allowed at any rank.</p>
                                     </div>
                                     <button
-                                        onClick={sendTeamReveal}
-                                        className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-all shadow-md"
+                                        onClick={sendPodium}
+                                        disabled={podiumEntries.length === 0}
+                                        className="flex items-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-stone-900 font-black rounded-xl text-sm transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
-                                        <LayoutGrid size={14} />
-                                        Show All on Screen
+                                        <Trophy size={16} /> Show Podium
                                     </button>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                                    {gradeStudents.map(student => (
-                                        <StudentCard
-                                            key={student.id}
-                                            student={student}
-                                            isSpotlit={spotlitStudent?.id === student.id && activeMode === 'spotlight'}
-                                            onSpotlight={() => sendSpotlight(student)}
+                                {/* Podium slots preview */}
+                                <div className="grid grid-cols-1 gap-3 mb-8">
+                                    {([1, 2, 3] as const).map(pos => (
+                                        <PodiumSlotPreview
+                                            key={pos}
+                                            position={pos}
+                                            students={podiumByPosition(pos)}
+                                            onRemove={removeFromPodium}
                                         />
                                     ))}
                                 </div>
 
-                                <p className="text-stone-700 text-xs text-center mt-6">
-                                    Tap a student card to spotlight them on the projector
-                                </p>
+                                {/* Grade selector for podium */}
+                                <div className="mb-4">
+                                    <p className="text-stone-400 text-xs font-black uppercase tracking-widest mb-3">Add students from grade</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {GRADE_BUTTONS.map(({ value, label }) => {
+                                            const count = allStudents.filter(s =>
+                                                s.grade === value && (!!s.schoolId || schoolNames.has(s.school ?? ''))
+                                            ).length;
+                                            return (
+                                                <button
+                                                    key={value}
+                                                    onClick={() => setSelectedGrade(value)}
+                                                    disabled={count === 0}
+                                                    className={`
+                                                        px-3 py-1.5 rounded-xl text-xs font-bold transition-all border
+                                                        ${selectedGrade === value
+                                                            ? 'bg-amber-500 text-stone-900 border-amber-500 scale-105'
+                                                            : count === 0
+                                                                ? 'bg-stone-900 border-stone-800 text-stone-700 cursor-not-allowed'
+                                                                : 'bg-stone-800 border-stone-700 text-stone-300 hover:border-amber-500/50 hover:text-amber-400'}
+                                                    `}
+                                                >
+                                                    {label} {count > 0 && <span className="opacity-60">{count}</span>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Students from selected grade for podium assignment */}
+                                {selectedGrade !== null && gradeStudents.length > 0 && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {gradeStudents.map(student => (
+                                            <StudentCard
+                                                key={student.id}
+                                                student={student}
+                                                isSpotlit={false}
+                                                isSlideshowing={false}
+                                                podiumPosition={getPodiumPosition(student.id)}
+                                                onSpotlight={() => sendSpotlight(student)}
+                                                onAddPodium={(pos) => addToPodium(student, pos)}
+                                                onRemovePodium={() => removeFromPodium(student.id)}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+
+                                {podiumEntries.length === 0 && (
+                                    <div className="text-center py-12 text-stone-600">
+                                        <Trophy size={40} className="mx-auto mb-3 opacity-20" />
+                                        <p className="text-sm">No students assigned yet.</p>
+                                        <p className="text-xs mt-1">Use the Roster or select a grade above and click +1st/+2nd/+3rd</p>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
