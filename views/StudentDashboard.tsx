@@ -3,6 +3,12 @@ import { StudentProfile, Achievement, ShopItem, InventoryItem, Vendor, Sponsor }
 import { fetchStudentAchievements, fetchLeaderboard, purchaseItem, fetchStudentInventory, isSupabaseConfigured, fetchVendors, fetchSponsors, checkAndUnlockAchievements, fetchStudentWordStats, activateDoubleXP } from '../services/supabaseData';
 import { Trophy, Flame, Star, Medal, Crown, Target, Zap, BookOpen, Award, ShoppingBag, Coins, Heart, Shield, Sparkles, Lock, CheckCircle, Pen, Timer } from 'lucide-react';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 🏆 LIVE EVENT FLAG — Set to `true` to lock Exercises during the competition.
+//    Change back to `false` once the event is over to restore normal access.
+// ─────────────────────────────────────────────────────────────────────────────
+const GAME_OVER = true;
+
 interface StudentDashboardProps {
     student: StudentProfile;
     onStartPractice: (mode: 'generator' | 'drill') => void;
@@ -329,12 +335,27 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, onS
                     >
                         <BookOpen size={18} /> Practice
                     </button>
-                    <button
-                        onClick={() => onStartPractice('drill')}
-                        className="w-full py-3.5 bg-stone-900 hover:bg-stone-800 active:scale-[0.98] text-amber-400 rounded-2xl font-bold transition-all shadow-md text-sm flex items-center justify-center gap-2"
-                    >
-                        <Target size={18} /> Exercises
-                    </button>
+                    {GAME_OVER ? (
+                        <div className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 cursor-not-allowed select-none"
+                            style={{
+                                background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #7f1d1d 100%)',
+                                color: '#fca5a5',
+                                boxShadow: '0 0 18px rgba(220,38,38,0.45), inset 0 1px 0 rgba(255,255,255,0.08)',
+                                border: '1px solid rgba(239,68,68,0.4)',
+                                letterSpacing: '0.08em',
+                            }}
+                        >
+                            <span style={{ fontSize: '16px', filter: 'drop-shadow(0 0 6px rgba(239,68,38,0.9))' }}>🔒</span>
+                            <span style={{ textShadow: '0 0 10px rgba(252,165,165,0.6)' }}>GAME OVER</span>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => onStartPractice('drill')}
+                            className="w-full py-3.5 bg-stone-900 hover:bg-stone-800 active:scale-[0.98] text-amber-400 rounded-2xl font-bold transition-all shadow-md text-sm flex items-center justify-center gap-2"
+                        >
+                            <Target size={18} /> Exercises
+                        </button>
+                    )}
                 </div>
             </div>
 
