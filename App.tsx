@@ -25,6 +25,7 @@ import { ToastContainer } from './components/Toast';
 import { LoadingOverlay } from './components/LoadingSpinner';
 import { AnimatePresence } from 'framer-motion';
 import { PageTransition } from './components/PageTransition';
+import { Analytics } from '@vercel/analytics/react';
 
 import {
   isSupabaseConfigured,
@@ -800,12 +801,18 @@ const App: React.FC = () => {
   // The coordinator drags this tab to the projector window and presses F11.
   const isLiveMode = new URLSearchParams(window.location.search).get('live') === '1';
   if (isLiveMode) {
-    return <LiveEventDisplay />;
+    return (
+      <>
+        <LiveEventDisplay />
+        <Analytics />
+      </>
+    );
   }
 
   return (
     <ToastProvider>
       <AppContent />
+      <Analytics />
     </ToastProvider>
   );
 };
